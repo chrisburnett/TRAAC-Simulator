@@ -33,7 +33,7 @@ class TraacSTOnly < Raac
                     evaluate_request(event, policy))
     
     # return expectation
-    trust_model.evaluate(request[:requester])
+    tm.evaluate(request[:requester])
   end
 
   # the evaluation function
