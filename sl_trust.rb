@@ -8,7 +8,9 @@ class DirectSLTrustModel
 
   def initialize
     # store of positive/negative observations after interactions
-    @evidence = Hash.new({r: 0.0, s: 0.0})
+    # r is initially 1 because of innocent until proven guilty
+    # will be removed on first violation
+    @evidence = Hash.new({r: 1.0, s: 0.0})
     # store of apriori values for agents
     @priors = Hash.new(0.5)
     # opinion is belief, disbelief, uncertainty and apriori
@@ -21,7 +23,15 @@ class DirectSLTrustModel
   end
 
   def add_evidence(agent, outcome)
-    outcome ? @evidence[agent][:r] += 1 : @evidence[agent][:s] += 1
+    if outcome then
+      @evidence[agent][:r] += 1 
+    else
+      @evidence[agent][:s] += 1
+      # check if this is first violation - if so remove IUPG bonus
+      if @evidence[agent][:s] == 1
+        @evidence[agent][:r] -= 1 
+      end
+    end
   end
 
   # return an SL opinion from the R and S parameters
@@ -37,6 +47,11 @@ class DirectSLTrustModel
   def compute_expectation(opinion)
     # e = b + (u * a)
     opinion[:b] + (opinion[:a] * opinion[:u])
+  end
+
+  # get evidence pair for an agent
+  def get_evidence(agent)
+    @evidence[agent]
   end
 
 

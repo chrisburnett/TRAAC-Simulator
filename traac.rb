@@ -9,7 +9,6 @@ class TraacSTOnly < Raac
 
   def initialize
     super
-    @sharing_history = Hash.new(Array.new)
     @trust_models = Hash.new(DirectSLTrustModel.new)
   end
 
@@ -28,27 +27,11 @@ class TraacSTOnly < Raac
 
   def compute_trust(request, policy)
     # get the trust rating for this requester
-    trust_model = DirectSLTrustModel.new
-    violated = false
-    @sharing_history[request[:owner]].each do |event| 
-      # if this event is to do with the requester for which we are calculating
-      evaluation = evaluate_request(event, policy)
-      if event[:requester].id == request[:requester].id
-        trust_model.add_evidence(request[:requester], evaluation)
-      end
-
-      # no-violation bonus - need to do a big search, if there isn't a
-      # denied sharing event then plus - only one data item assumed so
-      # only one possible increment
-      if !evaluation then violated = true end
-    end
+    tm = @trust_models[request[:requester].id]
+    # evaluate and add result to the trust model
+    tm.add_evidence(request[:requester], 
+                    evaluate_request(event, policy))
     
-    # if we never saw a violation then give the one point bonus
-    if !violated then trust_model.add_evidence(request[:requester], true) end
-    
-    # recorded regardless of decision
-    @sharing_history[request[:requester].id] << request
-
     # return expectation
     trust_model.evaluate(request[:requester])
   end
