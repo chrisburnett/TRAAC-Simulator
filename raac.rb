@@ -69,6 +69,7 @@ class Raac
     # simple approach - trust is 0 for everyone so risk is always just
     # the risk for the sensitivity label
     Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
+    #rand
   end
 
   # get the risk domains, possibly adjusting for trust

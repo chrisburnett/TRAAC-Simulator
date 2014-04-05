@@ -9,7 +9,7 @@ class TraacSTOnly < Raac
 
   def initialize
     super
-    @trust_models = Hash.new(DirectSLTrustModel.new)
+    @trust_models = Hash.new { |h,k| h[k] = DirectSLTrustModel.new }
   end
 
   private
@@ -22,15 +22,15 @@ class TraacSTOnly < Raac
     # get the risk and multiply by 1-trust
     loss = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
     trust = compute_trust(request, policy)
-    (1-trust)*loss    
+    (1-trust)*loss
   end
 
   def compute_trust(request, policy)
     # get the trust rating for this requester
-    tm = @trust_models[request[:requester].id]
+    tm = @trust_models[request[:owner]]
     # evaluate and add result to the trust model
     tm.add_evidence(request[:requester], 
-                    evaluate_request(event, policy))
+                    evaluate_request(request, policy))
     
     # return expectation
     tm.evaluate(request[:requester])
@@ -40,7 +40,7 @@ class TraacSTOnly < Raac
   # positive if shared into read/share/undefined_good
   # negative if shared into deny/undefined_bad (else?)
   def evaluate_request(request, policy)
-    if [:read, :share, :undefined_good].include? policy[request[:recipient].id]
+    if [:read, :share, :undefined_good].include? policy[request[:recipient].id][0]
       true
     else
       false

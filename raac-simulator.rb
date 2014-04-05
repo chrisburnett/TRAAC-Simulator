@@ -5,22 +5,23 @@ require 'pp'
 require_relative 'requester'
 require_relative 'traac'
 require_relative 'raac'
+require_relative 'plotter'
 
 class Raac_Simulator
 
   def initialize
-    # access control models to test
-    #@traac = Traac.new
-    @model = Parameters::MODEL.new
-
+    # instantiate models
+    @models = {}
+    Parameters::MODELS.each { |model| @models[model.name] = model.new }
     # results
-    @results = []
-
+    @results = {}
     # generate the requesting agents
     @requesters = []
     Parameters::TYPES.each do |type, props| 
       props[:count].times do |i| 
-        @requesters << Requester.new(type.to_s + i.to_s, props[:sharing], props[:obligation])
+        @requesters << Requester.new(type.to_s + i.to_s, 
+                                     props[:sharing], 
+                                     props[:obligation])
       end
     end
     
@@ -40,7 +41,7 @@ class Raac_Simulator
       @owners << id
 
       # assign requesters to zones - do this like dealing out cards
-      @policies[id] = Hash.new { |hash, key| hash[key] = []; }
+      @policies[id] = Hash.new { |hash, key| hash[key] = [] }
       while not requester_stack.empty?
         Parameters::ZONES.each do |zone|
           r = requester_stack.pop
@@ -80,98 +81,83 @@ class Raac_Simulator
                   props[new_type_id][:obligation])
   end
 
-  def writeout_results
-    # need to collate the results from each run and timestep, and
-    # average
-    Parameters::TIME_STEPS.times do |i| 
-      sum = 0.0
-      @results.each { |r| sum += r[i] }
-      puts sum / Parameters::RUNS
-    end
-  end
 
   def run
+    # for each specified model, do the number of runs
+    @models.each do |name, model|
+      Parameters::RUNS.times do |run|
+        run_results = []
+        # run TIME_STEPS accesses against the system
+        Parameters::TIME_STEPS.times do |t|
+          timestep_result = 0.0
+          #for each owner, generate a random request against his model
+          @owners.each do |owner|
+            requester = get_recipient_from_zone(owner, :share)
+            recipient = get_recipient(owner, requester)
+            request = { 
+              owner: owner,
+              requester: requester,
+              recipient: recipient,
+              sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
+            }
 
-    Parameters::RUNS.times do |run|
-      run_results = []
-      # run TIME_STEPS accesses against the system
-      Parameters::TIME_STEPS.times do |t|
-        timestep_result = 0
-        #for each owner, generate a random request against his model
-        @owners.each do |owner|
-          requester = get_recipient_from_zone(owner,:share)
-          recipient = get_recipient(owner, requester)
-          request = { 
-            owner: owner,
-            requester: requester,
-            recipient: recipient,
-            sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
-          }
-
-          # do an access request, pass in policy
-          result = @model.authorisation_decision(request, @policies[request[:owner]])
-          
-          # if a good result, add bonus to timestep utility, if bad, remove
-          # simulates realisation of risk/reward
-          # if access is denied (through sharing) to someone in undefined_good, then bad
-          #update = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
-          update = 1
-          # if access granted (through sharing) to someone in undefined_bad, then bad
-          if result[:decision] && @policies[owner][recipient.id][0] == :undefined_bad then
-            timestep_result -= update
-            # if shared into read, share or undefined...
-          elsif [:read, :share, :undefined_good].include?(@policies[owner][recipient.id][0])
-            if result[:decision]
-              # and access granted, positive utility update
-              timestep_result += update
-            else
-              # and access denied, negative utility update
+            # do an access request, pass in policy
+            result = model.authorisation_decision(request, @policies[owner])
+            
+            # if a good result, add bonus to timestep utility, if bad, remove
+            # simulates realisation of risk/reward
+            # if access is denied (through sharing) to someone in undefined_good, then bad
+            update = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
+            # if access granted (through sharing) to someone in undefined_bad, then bad
+            if result[:decision] && @policies[owner][recipient.id][0] == :undefined_bad then
               timestep_result -= update
+              # if shared into read, share or undefined...
+            elsif [:read, :share, :undefined_good].include?(@policies[owner][recipient.id][0])
+              if result[:decision]
+                # and access granted, positive utility update
+                timestep_result += update
+              else
+                # and access denied, negative utility update
+                timestep_result -= update
+              end
             end
-          end
 
-          # determine whether requester fulfils and restore budget agent
-          # only gets one chance to ever fulfil, at this point - this
-          # simulates that agents might complete the obligation, but might
-          # never, and gives one variable to control this
-          if rand <= request[:requester].obligation_comp
-            @model.do_obligation(request[:requester])
-          end
+            # determine whether requester fulfils and restore budget agent
+            # only gets one chance to ever fulfil, at this point - this
+            # simulates that agents might complete the obligation, but might
+            # never, and gives one variable to control this
+            if rand <= request[:requester].obligation_comp
+              model.do_obligation(request[:requester])
+            end
 
-          # if the recipient was in one of the undefined zones,
-          # immediately move from there to the appropriate explicit zone,
-          # before trust update ideally - then add a new agent to
-          # FIXME: fix this horrible bit
-          if @policies[owner][recipient.id] == :undefined_good
-            @policies[owner][recipient.id] = :read
-            @requesters << get_replacement
-          elsif @policies[owner][recipient.id] == :undefined_bad
-            @policies[owner][recipient.id] = :deny
-            @requesters << get_replacement
-          end
+            # if the recipient was in one of the undefined zones,
+            # immediately move from there to the appropriate explicit zone,
+            # before trust update ideally - then add a new agent to
+            zone = @policies[owner][recipient.id]
+            new_zone = zone
+            if zone == :undefined_good
+              new_zone = :read
+            elsif zone == :undefined_bad
+              new_zone = :deny
+            end
+            @policies[owner][recipient.id] = new_zone
+            if zone != new_zone then @requesters << get_replacement end
 
-          # end of foreach owner
+            # end of foreach owner
+          end
+          # append timestep total to the array of results
+          run_results << timestep_result / Parameters::OWNER_COUNT.to_f
         end
-        # append timestep total to the array of results
-        run_results << timestep_result / Parameters::OWNER_COUNT
+        # end of foreach timestep
+        (@results[name] ||= []) << run_results
       end
-      # end of foreach timestep
-      @results << run_results
     end
-    writeout_results
+    
+    # write results to csv and svg
+    Plotter.writeout_results(@results)
+    Plotter.plot_results
   end
 end
-
-
-# class Owner
-
-#   attr_accessor :id
-
-#   def initialize(id)
-#     @id = id
-#   end
-
-# end
 
 rs = Raac_Simulator.new
 rs.run

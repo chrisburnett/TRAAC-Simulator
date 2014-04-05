@@ -7,10 +7,10 @@ module Parameters
   RUNS = 10
   
   # how many data owners to use and evaluate
-  OWNER_COUNT = 60
+  OWNER_COUNT = 10
   
   # experimental condition (RAAC classes)
-  MODEL = TraacSTOnly
+  MODELS = [Raac,TraacSTOnly]
 
   # settings for the data owners, data objects and policies
 
@@ -25,8 +25,8 @@ module Parameters
 
   RISK_DOMAINS = {
     d1: [0,0.2],
-    d2: [0.2,0.8],
-    d3: [0.8,1]
+    d2: [0.2,0.5],
+    d3: [0.5,1]
   }
 
   # this is the ID of the risk domain that constitutes a rejection of the request
@@ -81,9 +81,9 @@ module Parameters
 
   # we will use 'g' to mean good (trustworthy) and b to mean bad, for sharing trust and obligation trust respectively
   TYPES = {
-    gg: { sharing: 0.8, obligation: 0.8, count: 6 },
-    gb: { sharing: 0.3, obligation: 0.3, count: 6 },
-    bg: { sharing: 0.3, obligation: 0.8, count: 6 },
-    bb: { sharing: 0.3, obligation: 0.3, count: 6 }
+    gg: { sharing: 0.8, obligation: 0.8, count: 10 },
+    gb: { sharing: 0.8, obligation: 0.3, count: 10 },
+    bg: { sharing: 0.3, obligation: 0.8, count: 10 },
+    bb: { sharing: 0.3, obligation: 0.3, count: 10 }
   }
 end

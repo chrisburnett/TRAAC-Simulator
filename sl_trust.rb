@@ -10,16 +10,14 @@ class DirectSLTrustModel
     # store of positive/negative observations after interactions
     # r is initially 1 because of innocent until proven guilty
     # will be removed on first violation
-    @evidence = Hash.new({r: 1.0, s: 0.0})
+    @evidence = Hash.new { |hash, key| hash[key] = {r: 1.0, s: 0.0}}
     # store of apriori values for agents
-    @priors = Hash.new(0.5)
-    # opinion is belief, disbelief, uncertainty and apriori
-    @opinions = Hash.new({b: 0.0, d: 0.0, u: 1.0, a: 0.5})
+    @prior = 0
   end
 
   # evaluate an agent and cache its rating
   def evaluate(agent)
-    compute_expectation(compute_opinion(@evidence[agent], @priors[agent]))
+    compute_expectation(compute_opinion(@evidence[agent], @prior))
   end
 
   def add_evidence(agent, outcome)
@@ -40,13 +38,13 @@ class DirectSLTrustModel
      b: evidence[:r] / (evidence[:r] + evidence[:s] + 2),
      d: evidence[:s] / (evidence[:r] + evidence[:s] + 2),
      u: 2 / (evidence[:r] + evidence[:s] + 2),
-     a: prior
+     a: @prior
     }
   end
 
   def compute_expectation(opinion)
     # e = b + (u * a)
-    opinion[:b] + (opinion[:a] * opinion[:u])
+    opinion[:b] + (@prior * opinion[:u])
   end
 
   # get evidence pair for an agent

@@ -40,7 +40,7 @@ class Raac_Simulator
       @owners << id
 
       # assign requesters to zones - do this like dealing out cards
-      @policies[id] = Hash.new { |hash, key| hash[key] = []; }
+      @policies[id] = Hash.new { |hash, key| hash[key] = [] }
       while not requester_stack.empty?
         Parameters::ZONES.each do |zone|
           r = requester_stack.pop
@@ -81,7 +81,6 @@ class Raac_Simulator
   end
 
   def run
-
     # run TIME_STEPS accesses against the system
     Parameters::TIME_STEPS.times do |t|
       timestep_result = 0
@@ -105,6 +104,7 @@ class Raac_Simulator
         
         update = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
         # if access granted (through sharing) to someone in undefined_bad, then bad
+        puts "#{result[:decision]} - #{@policies[owner][recipient.id][0]}"
         if result[:decision] && @policies[owner][recipient.id][0] == :undefined_bad then
           timestep_result -= update
         # if shared into read, share or undefined...
@@ -161,4 +161,5 @@ end
 # end
 
 rs = Raac_Simulator.new
+puts dd
 rs.run
