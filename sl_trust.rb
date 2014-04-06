@@ -6,13 +6,13 @@ class DirectSLTrustModel
 
   attr_reader :evidence, :ratings
 
-  def initialize
+  def initialize(prior)
     # store of positive/negative observations after interactions
     # r is initially 1 because of innocent until proven guilty
     # will be removed on first violation
     @evidence = Hash.new { |hash, key| hash[key] = {r: 1.0, s: 0.0}}
     # store of apriori values for agents
-    @prior = 0
+    @prior = prior
   end
 
   # evaluate an agent and cache its rating
@@ -21,9 +21,9 @@ class DirectSLTrustModel
   end
 
   def add_evidence(agent, outcome)
-    if outcome then
+    if outcome == true then
       @evidence[agent][:r] += 1 
-    else
+    elsif outcome == false then
       @evidence[agent][:s] += 1
       # check if this is first violation - if so remove IUPG bonus
       if @evidence[agent][:s] == 1

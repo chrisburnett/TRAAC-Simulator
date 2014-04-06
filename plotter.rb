@@ -33,9 +33,9 @@ class Plotter
 set terminal postscript
 set output "results.eps"
 set xrange [0:#{Parameters::TIME_STEPS}]
-set yrange [-1:1]
+set yrange [-0.3:0.3]
 set datafile separator ","
-plot for [i=1:2] "results.csv" using i with lines title columnheader
+plot for [i=1:3] "results.csv" using i with lines title columnheader
 
 )
     IO.popen("gnuplot", "w") { |io| io.puts commands }

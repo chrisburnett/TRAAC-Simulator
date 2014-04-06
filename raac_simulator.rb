@@ -21,7 +21,8 @@ class Raac_Simulator
       props[:count].times do |i| 
         @requesters << Requester.new(type.to_s + i.to_s, 
                                      props[:sharing], 
-                                     props[:obligation])
+                                     props[:obligation],
+                                     type)
       end
     end
     
@@ -72,13 +73,14 @@ class Raac_Simulator
   end
 
   # get a replacement agent with a new unique id
-  def get_replacement
+  def get_replacement(type_id)
     # replace the agent that moved
-    new_type_id = Parameters::TYPES.keys.sample
     @replacement_counter += 1
-    Requester.new(new_type_id + replacement_counter.to_s, 
-                  Parameters::TYPES[new_type_id][:sharing], 
-                  props[new_type_id][:obligation])
+    Requester.new("n" + type_id.to_s + @replacement_counter.to_s, 
+                  Parameters::TYPES[type_id][:sharing], 
+                  Parameters::TYPES[type_id][:obligation],
+                  type_id
+                  )
   end
 
 
@@ -99,50 +101,52 @@ class Raac_Simulator
               requester: requester,
               recipient: recipient,
               sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
+              #sensitivity: :high
             }
 
             # do an access request, pass in policy
             result = model.authorisation_decision(request, @policies[owner])
-            
+            #pp result
             # if a good result, add bonus to timestep utility, if bad, remove
             # simulates realisation of risk/reward
             # if access is denied (through sharing) to someone in undefined_good, then bad
             update = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
+            #update = 1
             # if access granted (through sharing) to someone in undefined_bad, then bad
             if result[:decision] && @policies[owner][recipient.id][0] == :undefined_bad then
               timestep_result -= update
+              #puts "#{result[:decision]} - #{@policies[owner][recipient.id][0]} - --"
               # if shared into read, share or undefined...
-            elsif [:read, :share, :undefined_good].include?(@policies[owner][recipient.id][0])
-              if result[:decision]
+            elsif !result[:decision] && @policies[owner][recipient.id][0] == :undefined_good then
+              #if result[:decision]
                 # and access granted, positive utility update
-                timestep_result += update
-              else
-                # and access denied, negative utility update
-                timestep_result -= update
-              end
-            end
+                #puts "#{result[:decision]} - #{@policies[owner][recipient.id][0]} - ++"
 
-            # determine whether requester fulfils and restore budget agent
-            # only gets one chance to ever fulfil, at this point - this
-            # simulates that agents might complete the obligation, but might
-            # never, and gives one variable to control this
-            if rand <= request[:requester].obligation_comp
-              model.do_obligation(request[:requester])
+              timestep_result -= update
+              #else
+                # and access denied, negative utility update
+                #puts "#{result[:decision]} - #{@policies[owner][recipient.id][0]} - --"
+
+              #timestep_result -= update
             end
 
             # if the recipient was in one of the undefined zones,
             # immediately move from there to the appropriate explicit zone,
             # before trust update ideally - then add a new agent to
-            zone = @policies[owner][recipient.id]
-            new_zone = zone
-            if zone == :undefined_good
-              new_zone = :read
-            elsif zone == :undefined_bad
-              new_zone = :deny
-            end
-            @policies[owner][recipient.id] = new_zone
-            if zone != new_zone then @requesters << get_replacement end
-
+            # zone = @policies[owner][recipient.id][0]
+            # new_zone = zone
+            # if zone == :undefined_good
+            #   new_zone = :read
+            # elsif zone == :undefined_bad
+            #   new_zone = :deny
+            # end
+            # @policies[owner][recipient.id] = new_zone
+            # if zone != new_zone
+            #   replacement = get_replacement(recipient.type)
+            #   pp replacement.id
+            #   @policies[owner][replacement.id] = zone
+            #   @requesters << replacement
+            # end
             # end of foreach owner
           end
           # append timestep total to the array of results

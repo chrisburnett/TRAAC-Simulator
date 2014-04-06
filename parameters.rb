@@ -4,13 +4,13 @@ require_relative 'raac'
 module Parameters
 
   TIME_STEPS = 100
-  RUNS = 10
+  RUNS = 50
   
   # how many data owners to use and evaluate
-  OWNER_COUNT = 10
+  OWNER_COUNT = 300
   
   # experimental condition (RAAC classes)
-  MODELS = [Raac,TraacSTOnly]
+  MODELS = [Raac,TraacSTOnly,TraacSTOT]
 
   # settings for the data owners, data objects and policies
 
@@ -23,11 +23,21 @@ module Parameters
   # done.
   ZONES = [:share, :read, :deny, :undefined_good, :undefined_bad]
 
-  RISK_DOMAINS = {
-    d1: [0,0.2],
-    d2: [0.2,0.5],
-    d3: [0.5,1]
+  # RISK_DOMAINS = {
+  #   d1: [0.0,0.2],
+  #   d2: [0.2,0.6],
+  #   d3: [0.6,1.0]
+  # }
+
+  # we now define the domains in the following way.
+
+
+  SENSITIVITY_TO_LOSS = {
+    low: 0.3,
+    med: 0.7,
+    high: 1
   }
+
 
   # this is the ID of the risk domain that constitutes a rejection of the request
   REJECT_DOMAIN = :d3
@@ -44,19 +54,19 @@ module Parameters
     { 
       d1: :none,
       d2: :user_send_email,
-      d3: :system_log_request,
+      d3: :none,
     },
     ms2: 
     { 
       d1: :none,
       d2: :user_send_email,
-      d3: :system_log_request,
+      d3: :none,
     },
     ms3: 
     { 
       d1: :none,
       d2: :user_send_email,
-      d3: :system_log_request,
+      d3: :none,
     },
   }
   
@@ -66,24 +76,22 @@ module Parameters
     low: :ms3
   }
 
-  SENSITIVITY_TO_LOSS = {
-    high: 0.9,
-    med: 0.5,
-    low: 0.1
-  }
 
   # PARAMETERS SPECIFIC TO RAAC
   INITIAL_BUDGET = 10
-  BUDGET_DECREMENT = 3
+  BUDGET_DECREMENT = 1
 
-  # PARAMETERS SPECIFIC TO TRAAC
+  # PARAMETERS SPECIFIC TO TRAAC FIXME: NOT WIRED UP
+
+  ST_PRIOR = 1
+  OT_PRIOR = 0
   
 
   # we will use 'g' to mean good (trustworthy) and b to mean bad, for sharing trust and obligation trust respectively
   TYPES = {
-    gg: { sharing: 0.8, obligation: 0.8, count: 10 },
-    gb: { sharing: 0.8, obligation: 0.3, count: 10 },
-    bg: { sharing: 0.3, obligation: 0.8, count: 10 },
-    bb: { sharing: 0.3, obligation: 0.3, count: 10 }
+    gg: { sharing: 0.8, obligation: 0.8, count: 5 },
+    gb: { sharing: 0.8, obligation: 0.3, count: 5 },
+    bg: { sharing: 0.3, obligation: 0.8, count: 5 },
+    bb: { sharing: 0.3, obligation: 0.3, count: 5 }
   }
 end

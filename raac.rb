@@ -10,7 +10,7 @@ class Raac
 
   # This function returns a pair of decision (true or false) and an obligation (can be "none")
   def authorisation_decision(request, policy)
-    # compute the risk (easy lol)
+    # compute the risk
     risk = compute_risk(request, policy)
 
     # get the mitigation strategy for the permission mentioned in the request
@@ -18,10 +18,10 @@ class Raac
 
     obligation = :none
     decision = false
-
+    fdomain = Parameters::REJECT_DOMAIN
     # check for deny zone and check the user has enough budget
     # (instant deny conditions)
-    if policy[request[:recipient]] != :deny &&
+    if policy[request[:recipient]][0] != :deny &&
         @risk_budgets[request[:requester]] > 0
       # now check to see which risk domain the computed risk falls into
       risk_domains(request).each do |did, domain| 
@@ -30,32 +30,47 @@ class Raac
           obligation = Parameters::MITIGATION_STRATEGIES[ms][did]
           # if an obligation (auto-accepted) then decrease budget
           if obligation != :none then
-            @risk_budgets[request[:requester]] -= @budget_decrement
+            # simulate possible completion by only deducting the
+            # budget if there is a failure
+            if rand <= 1-request[:requester].obligation_comp then
+              fail_obligation(request[:requester])         
+            else
+              do_obligation(request[:requester])
+            end
           end
-          
+
           # if we are in the last domain then reject the request,
           # otherwise accept (poss. with obligation)
           if did == Parameters::REJECT_DOMAIN then 
             decision = false 
           else decision = true 
           end
+          # record this just for logging in the result
+          fdomain = did
         end
       end
     end
 
+    
     return {
       decision: decision,
       risk: risk,
       obligation: obligation, 
+      domain: fdomain,
       strategy: ms, 
-      req_zone: policy[request[:recipient].id], 
+      requester: request[:requester].id,
+      recipient: request[:recipient].id,
+      source_zone: policy[request[:requester].id][0], 
+      target_zone: policy[request[:recipient].id][0],
       req_budget: @risk_budgets[request[:requester]]
     }
   end
 
-  # restore some budget to a requester
   def do_obligation(requester)
-    @risk_budgets[requester] += Parameters::BUDGET_DECREMENT
+  end
+
+  def fail_obligation(requester)
+    @risk_budgets[requester] -= @budget_decrement
   end
   
   private
@@ -69,7 +84,10 @@ class Raac
     # simple approach - trust is 0 for everyone so risk is always just
     # the risk for the sensitivity label
     Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
-    #rand
+    0
+    # 0 because to use the actual risk makes the system more cautious
+    # than our premissive mode, and since we don't punish bad
+    # blocking, it will always do better.
   end
 
   # get the risk domains, possibly adjusting for trust
