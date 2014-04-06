@@ -10,11 +10,14 @@ require_relative 'plotter'
 class Raac_Simulator
 
   def initialize
-    # instantiate models
-    @models = {}
-    Parameters::MODELS.each { |model| @models[model.name] = model.new }
     # results
     @results = {}
+    # instantiate models
+    setup
+  end
+  
+  def setup
+
     # generate the requesting agents
     @requesters = []
     Parameters::TYPES.each do |type, props| 
@@ -86,8 +89,12 @@ class Raac_Simulator
 
   def run
     # for each specified model, do the number of runs
-    @models.each do |name, model|
+    Parameters::MODELS.each do |model_class|
       Parameters::RUNS.times do |run|
+        # reset experiment and model state between runs
+        setup
+        # instantiate a new model
+        model = model_class.new
         run_results = []
         # run TIME_STEPS accesses against the system
         Parameters::TIME_STEPS.times do |t|
@@ -101,7 +108,6 @@ class Raac_Simulator
               requester: requester,
               recipient: recipient,
               sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
-              #sensitivity: :high
             }
 
             # do an access request, pass in policy
@@ -111,23 +117,17 @@ class Raac_Simulator
             # simulates realisation of risk/reward
             # if access is denied (through sharing) to someone in undefined_good, then bad
             update = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
-            #update = 1
             # if access granted (through sharing) to someone in undefined_bad, then bad
-            if result[:decision] && @policies[owner][recipient.id][0] == :undefined_bad then
-              timestep_result -= update
-              #puts "#{result[:decision]} - #{@policies[owner][recipient.id][0]} - --"
+            if result[:decision]
+              if @policies[owner][recipient.id][0] == :undefined_bad then
+                timestep_result -= update
               # if shared into read, share or undefined...
-            elsif !result[:decision] && @policies[owner][recipient.id][0] == :undefined_good then
-              #if result[:decision]
-                # and access granted, positive utility update
-                #puts "#{result[:decision]} - #{@policies[owner][recipient.id][0]} - ++"
-
+              elsif @policies[owner][recipient.id][0] == :undefined_good then
+                timestep_result += update
+              end
+            elsif @policies[owner][recipient.id][0] == :undefined_good then
+              # and access denied, negative utility update
               timestep_result -= update
-              #else
-                # and access denied, negative utility update
-                #puts "#{result[:decision]} - #{@policies[owner][recipient.id][0]} - --"
-
-              #timestep_result -= update
             end
 
             # if the recipient was in one of the undefined zones,
@@ -153,8 +153,9 @@ class Raac_Simulator
           run_results << timestep_result / Parameters::OWNER_COUNT.to_f
         end
         # end of foreach timestep
-        (@results[name] ||= []) << run_results
+        (@results[model_class.name] ||= []) << run_results
       end
+      print '.'
     end
     
     # write results to csv and svg
@@ -162,6 +163,8 @@ class Raac_Simulator
     Plotter.plot_results
   end
 end
+
+
 
 rs = Raac_Simulator.new
 rs.run

@@ -4,10 +4,10 @@ require_relative 'raac'
 module Parameters
 
   TIME_STEPS = 100
-  RUNS = 50
+  RUNS = 10
   
   # how many data owners to use and evaluate
-  OWNER_COUNT = 300
+  OWNER_COUNT = 500
   
   # experimental condition (RAAC classes)
   MODELS = [Raac,TraacSTOnly,TraacSTOT]
@@ -23,13 +23,11 @@ module Parameters
   # done.
   ZONES = [:share, :read, :deny, :undefined_good, :undefined_bad]
 
-  # RISK_DOMAINS = {
-  #   d1: [0.0,0.2],
-  #   d2: [0.2,0.6],
-  #   d3: [0.6,1.0]
-  # }
-
-  # we now define the domains in the following way.
+  RISK_DOMAINS = {
+    d1: [0.0,0.2],
+    d2: [0.2,0.6],
+    d3: [0.6,1.0]
+  }
 
 
   SENSITIVITY_TO_LOSS = {
@@ -78,20 +76,20 @@ module Parameters
 
 
   # PARAMETERS SPECIFIC TO RAAC
-  INITIAL_BUDGET = 10
+  INITIAL_BUDGET = 3
   BUDGET_DECREMENT = 1
 
-  # PARAMETERS SPECIFIC TO TRAAC FIXME: NOT WIRED UP
+  # PARAMETERS SPECIFIC TO TRAAC
 
   ST_PRIOR = 1
-  OT_PRIOR = 0
+  OT_PRIOR = 1
   
 
   # we will use 'g' to mean good (trustworthy) and b to mean bad, for sharing trust and obligation trust respectively
   TYPES = {
-    gg: { sharing: 0.8, obligation: 0.8, count: 5 },
-    gb: { sharing: 0.8, obligation: 0.3, count: 5 },
-    bg: { sharing: 0.3, obligation: 0.8, count: 5 },
-    bb: { sharing: 0.3, obligation: 0.3, count: 5 }
+    gg: { sharing: 0.8, obligation: 0.8, count: 20 },
+    gb: { sharing: 0.8, obligation: 0.3, count: 20 },
+    bg: { sharing: 0.3, obligation: 0.8, count: 20 },
+    bb: { sharing: 0.3, obligation: 0.3, count: 20 }
   }
 end

@@ -11,6 +11,7 @@ class TraacSTOnly < Raac
     super
     @trust_models = 
       Hash.new { |h,k| h[k] = DirectSLTrustModel.new(Parameters::ST_PRIOR) }
+    # FIXME these trust models *should* be conditional on the obligation, but we are assuming only one obligation for now, so everything is hardcoded around that
   end
 
   private
@@ -60,7 +61,7 @@ class TraacSTOT < TraacSTOnly
     @ot_trust_models = Hash.new { |h,k| h[k] = 
       DirectSLTrustModel.new(Parameters::OT_PRIOR) }
     # disable budgeting
-    #@budget_decrement = 0
+    @budget_decrement = 0
   end
 
   # need to scale the risk domains
@@ -71,31 +72,40 @@ class TraacSTOT < TraacSTOnly
     tm = @ot_trust_models[requester.id]
     # get expectation of fulfillment
     ot = tm.evaluate(requester)
-    # now we have a trust value, push all the right-hand points of the
-    # risk domains to the right, to account for risk mitigation. We
-    # don't really need to scale them all, only the previous zone, but
-    # it makes the implementation cleaner at this point just to
-    # concertina them
+    # now we have a trust value, push all the left-hand points of the
+    # risk domains to the left, to account for adjusting risk
+    # mitigation. We don't really need to scale them all, only the
+    # obligation zones
     old_domains = Parameters::RISK_DOMAINS
     new_domains = {}
-    labels = old_domains.keys
-    # Ruby 1.9 - values are returned in order of addition, nice
-    old_domains.each do |label, domain| 
-      # get the next domain after this one
-      next_domain = old_domains[labels[labels.index(label) + 1]]
-      # get the amount to move
-      if next_domain
-        delta = ot * (next_domain[1] - domain[1])
-        # add to new domain list
-        new_domains[label] = [domain[0], domain[1] + delta]
-      else
-        # if we are on the last domain, we don't expand this one so
-        # just add it as is
-        new_domains[label] = domain
-      end
+    old_domains.each { |k,v| new_domains[k] = v.dup }
 
-    end
-    #puts "#{new_domains} - ot: #{ot} - rq: #{requester.id}"
+    # shrink the obligation interval...
+    delta = (1-ot) * (old_domains[:d2][1] - old_domains[:d2][0])
+    new_domains[:d2][1] = old_domains[:d2][1] - delta
+    # stitch up the new boundaries, expanding the deny interval
+    new_domains[:d3][0] = new_domains[:d2][1]
+
+    # only modify d2! only obligation-domain
+    
+                             
+    # labels = old_domains.keys
+    # # Ruby 1.9 - values are returned in order of addition, nice
+    # old_domains.each do |label, domain| 
+    #   # get the next domain after this one
+    #   next_domain = old_domains[labels[labels.index(label) + 1]]
+    #   # get the amount to move
+    #   if next_domain
+    #     delta = ot * (domain[1] - domain[0])
+    #     # add to new domain list
+    #     new_domains[label] = [domain[0], domain[1] - delta]
+    #   else
+    #     # if we are on the last domain, we don't expand this one so
+    #     # just add it as is
+    #     new_domains[label] = domain
+    #   end
+
+    #oputs "#{new_domains} - ot: #{ot} - rq: #{requester.id} - #{delta}"
     return new_domains
   end
   
