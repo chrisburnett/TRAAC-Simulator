@@ -8,9 +8,7 @@ class DirectSLTrustModel
 
   def initialize(prior)
     # store of positive/negative observations after interactions
-    # r is initially 1 because of innocent until proven guilty
-    # will be removed on first violation
-    @evidence = Hash.new { |hash, key| hash[key] = {r: 1.0, s: 0.0}}
+    @evidence = Hash.new { |hash, key| hash[key] = {r: 0.0, s: 0.0}}
     # store of apriori values for agents
     @prior = prior
   end
@@ -25,10 +23,14 @@ class DirectSLTrustModel
       @evidence[agent][:r] += 1 
     elsif outcome == false then
       @evidence[agent][:s] += 1
-      # check if this is first violation - if so remove IUPG bonus
-      if @evidence[agent][:s] == 1
-        @evidence[agent][:r] -= 1 
-      end
+    end
+  end
+
+  def remove_evidence(agent, outcome)
+    if outcome then
+      @evidence[agent][:r] -= 1 
+    else
+      @evidence[agent][:s] -= 1
     end
   end
 

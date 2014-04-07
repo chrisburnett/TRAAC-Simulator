@@ -93,8 +93,8 @@ class Raac
     # - so we need to use some kindof approximation let's adopt a
     # simple approach - trust is 0 for everyone so risk is always just
     # the risk for the sensitivity label
-    #Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
-    0
+    Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
+    
     # 0 because to use the actual risk makes the system more cautious
     # than our premissive mode, and since we don't punish bad
     # blocking, it will always do better.

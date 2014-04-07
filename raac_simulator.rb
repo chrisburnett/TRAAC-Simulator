@@ -58,8 +58,8 @@ class Raac_Simulator
   end
 
   # get an individual from the given zone of a given user's policy
-  def get_recipient_from_zone(owner, zone)
-    @requesters.select { |r| @policies[owner][r.id][0] == zone }.sample
+  def get_zone(owner, zone)
+    @requesters.select { |r| @policies[owner][r.id][0] == zone }
   end
 
   # get a recipient for a requester competent selectors are more
@@ -101,7 +101,7 @@ class Raac_Simulator
           timestep_result = 0.0
           #for each owner, generate a random request against his model
           @owners.each do |owner|
-            requester = get_recipient_from_zone(owner, :share)
+            requester = get_zone(owner, :share).sample
             recipient = get_recipient(owner, requester)
             request = { 
               owner: owner,
@@ -113,14 +113,7 @@ class Raac_Simulator
             # do an access request, pass in policy
             result = model.authorisation_decision(request, @policies[owner])
 
-            # deal with obligations
-            # at every time step there's a chance that agents will deal with obligations
-            prob = rand
-            if prob < Parameters::OBLIGATION_TIMEOUT_PROB
-              model.fail_obligation(requester)
-            elsif prob < requester.obligation_comp
-              model.do_obligation(requester)
-            end
+
 
             #pp result
             # if a good result, add bonus to timestep utility, if bad, remove
@@ -133,16 +126,32 @@ class Raac_Simulator
                 timestep_result -= update
               # if shared into read, share or undefined...
               elsif @policies[owner][recipient.id][0] == :undefined_good then
-                #timestep_result += update
+                timestep_result += update
               end
             elsif @policies[owner][recipient.id][0] == :undefined_good then
               # and access denied, negative utility update
-              timestep_result -= update
-            end            
+              #timestep_result -= update
+            end
           end
+
+          
+          # deal with obligations
+          @requesters.each do |requester| 
+            # at every time step there's a chance that agents will deal with obligations
+            prob = rand
+            if prob < Parameters::OBLIGATION_TIMEOUT_PROB
+              model.fail_obligation(requester)
+            end
+            
+            if prob < requester.obligation_comp
+              model.do_obligation(requester)
+            end
+          end
+          
           # append timestep total to the array of results
           run_results << timestep_result / Parameters::OWNER_COUNT.to_f
         end
+
         # end of foreach timestep
         (@results[model_class.name] ||= []) << run_results
       end

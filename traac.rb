@@ -109,11 +109,21 @@ class TraacSTOT < TraacSTOnly
     return new_domains
   end
   
+  # when an obligation is accepted, it's 'failed' until done
+  # stacking up heaps of unsatisfied obligations will be noticed
+  def add_obligation(requester, obligation)
+    super
+    tm = @ot_trust_models[requester.id]
+    tm.add_evidence(requester, false)
+  end
+  
   # completing/failing obligations updates trust
   # positive update for completion
   def do_obligation(requester)
     super
     tm = @ot_trust_models[requester.id]
+    # remove one of the negatives given for not yet satisfying
+    tm.remove_evidence(requester, false)
     tm.add_evidence(requester, true)
   end
 
