@@ -68,9 +68,9 @@ class Raac_Simulator
   # the deny or undefined_bad zones
   def get_recipient(owner, requester)
     if rand <= requester.sharing_comp
-      target_zones = [:share, :read, :undefined_good]
+      target_zones = [:undefined_good]
     else
-      target_zones = [:deny, :undefined_bad]
+      target_zones = [:undefined_bad]
     end
     return @requesters.select { |r| target_zones.include?(@policies[owner][r.id][0]) }.sample
   end
@@ -123,11 +123,11 @@ class Raac_Simulator
                 timestep_result -= update
               # if shared into read, share or undefined...
               elsif @policies[owner][recipient.id][0] == :undefined_good then
-                timestep_result += update
+                #timestep_result += update
               end
             elsif @policies[owner][recipient.id][0] == :undefined_good then
               # and access denied, negative utility update
-              timestep_result -= update
+              timestep_result -= Parameters::UNAVAILABILITY_LOSS
             end
 
             # if the recipient was in one of the undefined zones,

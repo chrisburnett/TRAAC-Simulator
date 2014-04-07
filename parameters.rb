@@ -31,10 +31,13 @@ module Parameters
 
 
   SENSITIVITY_TO_LOSS = {
-    low: 0.3,
-    med: 0.7,
+    low: 0.2,
+    med: 0.5,
     high: 1
   }
+
+  # static loss in case of something not being shared which should have been
+  UNAVAILABILITY_LOSS = 1
 
 
   # this is the ID of the risk domain that constitutes a rejection of the request
@@ -76,7 +79,7 @@ module Parameters
 
 
   # PARAMETERS SPECIFIC TO RAAC
-  INITIAL_BUDGET = 3
+  INITIAL_BUDGET = 20
   BUDGET_DECREMENT = 1
 
   # PARAMETERS SPECIFIC TO TRAAC
