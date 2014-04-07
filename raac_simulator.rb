@@ -24,7 +24,7 @@ class Raac_Simulator
       props[:count].times do |i| 
         @requesters << Requester.new(type.to_s + i.to_s, 
                                      props[:sharing], 
-                                     props[:obligation],
+                                     props[:obligation], 
                                      type)
       end
     end
@@ -33,6 +33,7 @@ class Raac_Simulator
     # just symbols, the traac class will keep more details
     @owners = []
     @policies = {}
+    @policy_zones = {}
 
     # replacement counter
     @replacement_counter = 0
@@ -46,6 +47,7 @@ class Raac_Simulator
 
       # assign requesters to zones - do this like dealing out cards
       @policies[id] = Hash.new { |hash, key| hash[key] = [] }
+
       while not requester_stack.empty?
         Parameters::ZONES.each do |zone|
           r = requester_stack.pop
@@ -54,13 +56,18 @@ class Raac_Simulator
           end
         end
       end
+
+      # optimisation - create another structure to maintain the policy
+      # as sets - doesn't cause a problem as we are not changing the
+      # policy
+      @policy_zones[id] = {}
+      Parameters::ZONES.each do |zone| 
+        @policy_zones[id][zone] = @requesters.select { |r| @policies[id][r.id][0] == zone }
+      end
+      
     end
   end
 
-  # get an individual from the given zone of a given user's policy
-  def get_zone(owner, zone)
-    @requesters.select { |r| @policies[owner][r.id][0] == zone }
-  end
 
   # get a recipient for a requester competent selectors are more
   # likely to get recipients from undefined_good, read or share
@@ -90,6 +97,7 @@ class Raac_Simulator
   def run
     # for each specified model, do the number of runs
     Parameters::MODELS.each do |model_class|
+      #puts model_class.name
       Parameters::RUNS.times do |run|
         # reset experiment and model state between runs
         setup
@@ -99,9 +107,12 @@ class Raac_Simulator
         # run TIME_STEPS accesses against the system
         Parameters::TIME_STEPS.times do |t|
           timestep_result = 0.0
+          sneakyresult = [0,0]
+
           #for each owner, generate a random request against his model
           @owners.each do |owner|
-            requester = get_zone(owner, :share).sample
+            requester = @policy_zones[owner][:share].sample
+            
             recipient = get_recipient(owner, requester)
             request = { 
               owner: owner,
@@ -123,14 +134,17 @@ class Raac_Simulator
             # if access granted (through sharing) to someone in undefined_bad, then bad
             if result[:decision]
               if @policies[owner][recipient.id][0] == :undefined_bad then
-                timestep_result -= update
+                timestep_result -= update.to_f
+                sneakyresult[0] += update.to_f
               # if shared into read, share or undefined...
               elsif @policies[owner][recipient.id][0] == :undefined_good then
-                timestep_result += update
+                timestep_result += update.to_f
+                sneakyresult[1] += update.to_f
+
               end
             elsif @policies[owner][recipient.id][0] == :undefined_good then
               # and access denied, negative utility update
-              #timestep_result -= update
+              # timestep_result -= update
             end
           end
 
@@ -138,24 +152,26 @@ class Raac_Simulator
           # deal with obligations
           @requesters.each do |requester| 
             # at every time step there's a chance that agents will deal with obligations
-            prob = rand
-            if prob < Parameters::OBLIGATION_TIMEOUT_PROB
+            if rand < requester.obligation_comp
+              model.do_obligation(requester)
+            end
+            if rand < Parameters::OBLIGATION_TIMEOUT_PROB
               model.fail_obligation(requester)
             end
             
-            if prob < requester.obligation_comp
-              model.do_obligation(requester)
-            end
           end
           
           # append timestep total to the array of results
-          run_results << timestep_result / Parameters::OWNER_COUNT.to_f
+          run_results << timestep_result.to_f / Parameters::OWNER_COUNT.to_f
+          puts "#{sneakyresult[0]}, #{sneakyresult[1]}"
+
         end
 
         # end of foreach timestep
         (@results[model_class.name] ||= []) << run_results
+        #print "."
       end
-      print '.'
+      #print "\n"
     end
     
     # write results to csv and svg

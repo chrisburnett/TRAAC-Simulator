@@ -1,5 +1,5 @@
-require 'csv'
-
+ require 'csv'
+require_relative 'parameters'
 
 class Plotter
 
@@ -19,7 +19,7 @@ class Plotter
         sum = 0.0
         runs.each { |run| sum += run[i] }
         # add the average for this timestep to the data
-        data << sum / runs.size
+        data << sum / runs.size.to_f
       end
       # add the data for this condition to the columns
       columns << data
@@ -33,7 +33,7 @@ class Plotter
 set terminal postscript
 set output "results.eps"
 set xrange [0:#{Parameters::TIME_STEPS}]
-set yrange [-0.3:0.3]
+set yrange [-0.05:0.2]
 set datafile separator ","
 plot for [i=1:3] "results.csv" using i with lines title columnheader
 

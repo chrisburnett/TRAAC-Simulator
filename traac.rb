@@ -106,6 +106,7 @@ class TraacSTOT < TraacSTOnly
     #   end
 
     #oputs "#{new_domains} - ot: #{ot} - rq: #{requester.id} - #{delta}"
+    
     return new_domains
   end
   

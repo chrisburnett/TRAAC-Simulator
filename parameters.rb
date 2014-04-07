@@ -3,14 +3,14 @@ require_relative 'raac'
 
 module Parameters
 
-  TIME_STEPS = 200
-  RUNS = 10
+  TIME_STEPS = 30
+  RUNS = 30
   
   # how many data owners to use and evaluate
-  OWNER_COUNT = 500
+  OWNER_COUNT = 300
   
   # experimental condition (RAAC classes)
-  MODELS = [TraacSTOnly]
+  MODELS = [Raac,TraacSTOnly,TraacSTOT]
 
   # settings for the data owners, data objects and policies
 
@@ -34,10 +34,10 @@ module Parameters
     low: 0.2,
     med: 0.5,
     high: 1
+    # low: 0.5,
+    # med: 0.5,
+    # high: 0.5
   }
-
-  # static loss in case of something not being shared which should have been
-  #UNAVAILABILITY_LOSS = 0.5
 
 
   # this is the ID of the risk domain that constitutes a rejection of the request
@@ -82,9 +82,8 @@ module Parameters
   # Probability of one of an agent's obligations hitting a deadline in
   # any time step - thus permanent decrease of risk budget (easier
   # than implementing TTL... although might be more rigorous)
-  OBLIGATION_TIMEOUT_PROB = 0.0
-
-  INITIAL_BUDGET = 10
+  OBLIGATION_TIMEOUT_PROB = 0.1
+  INITIAL_BUDGET = 5
   BUDGET_DECREMENT = 1
 
   # PARAMETERS SPECIFIC TO TRAAC
@@ -94,9 +93,9 @@ module Parameters
 
   # we will use 'g' to mean good (trustworthy) and b to mean bad, for sharing trust and obligation trust respectively
   TYPES = {
-    gg: { sharing: 0.8, obligation: 1.0, count: 20 },
-    gb: { sharing: 0.8, obligation: 1.0, count: 20 },
-    bg: { sharing: 0.3, obligation: 1.0, count: 20 },
-    bb: { sharing: 0.3, obligation: 1.0, count: 20 }
+    gg: { sharing: 0.8, obligation: 0.5, count: 10 },
+    gb: { sharing: 0.8, obligation: 0.1, count: 10 },
+    bg: { sharing: 0.2, obligation: 0.5, count: 10 },
+    bb: { sharing: 0.2, obligation: 0.1, count: 10 }
   }
 end
