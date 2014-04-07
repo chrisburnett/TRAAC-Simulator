@@ -111,7 +111,7 @@ class TraacSTOT < TraacSTOnly
   
   # when an obligation is accepted, it's 'failed' until done
   # stacking up heaps of unsatisfied obligations will be noticed
-  def add_obligation(requester, obligation)
+  def add_obligation(requester, obligation, owner)
     super
     tm = @ot_trust_models[requester.id]
     tm.add_evidence(requester, false)
