@@ -112,6 +112,16 @@ class Raac_Simulator
 
             # do an access request, pass in policy
             result = model.authorisation_decision(request, @policies[owner])
+
+            # deal with obligations
+            # at every time step there's a chance that agents will deal with obligations
+            prob = rand
+            if prob < Parameters::OBLIGATION_TIMEOUT_PROB
+              model.fail_obligation(requester)
+            elsif prob < requester.obligation_comp
+              model.do_obligation(requester)
+            end
+
             #pp result
             # if a good result, add bonus to timestep utility, if bad, remove
             # simulates realisation of risk/reward
@@ -127,27 +137,8 @@ class Raac_Simulator
               end
             elsif @policies[owner][recipient.id][0] == :undefined_good then
               # and access denied, negative utility update
-              timestep_result -= Parameters::UNAVAILABILITY_LOSS
-            end
-
-            # if the recipient was in one of the undefined zones,
-            # immediately move from there to the appropriate explicit zone,
-            # before trust update ideally - then add a new agent to
-            # zone = @policies[owner][recipient.id][0]
-            # new_zone = zone
-            # if zone == :undefined_good
-            #   new_zone = :read
-            # elsif zone == :undefined_bad
-            #   new_zone = :deny
-            # end
-            # @policies[owner][recipient.id] = new_zone
-            # if zone != new_zone
-            #   replacement = get_replacement(recipient.type)
-            #   pp replacement.id
-            #   @policies[owner][replacement.id] = zone
-            #   @requesters << replacement
-            # end
-            # end of foreach owner
+              timestep_result -= update
+            end            
           end
           # append timestep total to the array of results
           run_results << timestep_result / Parameters::OWNER_COUNT.to_f

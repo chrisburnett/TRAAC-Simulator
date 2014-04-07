@@ -112,18 +112,17 @@ class TraacSTOT < TraacSTOnly
   # completing/failing obligations updates trust
   # positive update for completion
   def do_obligation(requester)
+    super
     tm = @ot_trust_models[requester.id]
     tm.add_evidence(requester, true)
   end
 
+  # pop off an obligation but also update trust to record that it
+  # failed and will never be done
   def fail_obligation(requester)
     super
     tm = @ot_trust_models[requester.id]
     tm.add_evidence(requester, false)    
-  end
-
-  def evaluate_request_ot(request)
-    
   end
 
 end

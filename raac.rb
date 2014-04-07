@@ -6,6 +6,8 @@ class Raac
     @risk_budgets = Hash.new(Parameters::INITIAL_BUDGET)
     # superclasses can override this value, setting to 0 to disable risk budgeting
     @budget_decrement = Parameters::BUDGET_DECREMENT
+    # track obligations
+    @active_obligations = Hash.new { |h,k| h[k] = [] }
   end
   
   # This function returns a pair of decision (true or false) and an obligation (can be "none")
@@ -28,15 +30,11 @@ class Raac
         if risk >= domain[0] && risk < domain[1] then
           # set the obligation to whatever the mitigation strategy says for this risk domain
           obligation = Parameters::MITIGATION_STRATEGIES[ms][did]
-          # if an obligation (auto-accepted) then decrease budget
+
+          # if there was an obligation, decrease budget and add it to
+          # the active list for this agent
           if obligation != :none then
-            # simulate possible completion by only deducting the
-            # budget if there is a failure
-            if rand <= 1-request[:requester].obligation_comp then
-              fail_obligation(request[:requester])         
-            else
-              do_obligation(request[:requester])
-            end
+            add_obligation(request[:requester], obligation)
           end
 
           # if we are in the last domain then reject the request,
@@ -45,12 +43,14 @@ class Raac
             decision = false 
           else decision = true 
           end
+
           # record this just for logging in the result
           fdomain = did
         end
       end
     end
 
+    # return lots of information
     return {
       decision: decision,
       risk: risk,
@@ -64,12 +64,23 @@ class Raac
       req_budget: @risk_budgets[request[:requester]]
     }
   end
-
+  
+  def add_obligation(requester, obligation)
+    @active_obligations[requester].push(obligation)
+    @risk_budgets[requester] -= @budget_decrement
+  end
+  
   def do_obligation(requester)
+    # if this requester has any open obligations, do one and restore
+    # budget
+    ob = @active_obligations[requester].pop
+    if ob != nil then @risk_budgets[requester] += @budget_decrement end
   end
 
+  # failing an obligation is when it times out and it's not longer
+  # possible to get your budget back
   def fail_obligation(requester)
-    @risk_budgets[requester] -= @budget_decrement
+    @active_obligations[requester].pop
   end
   
   private
