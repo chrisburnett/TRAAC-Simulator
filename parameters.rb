@@ -3,11 +3,11 @@ require_relative 'raac'
 
 module Parameters
 
-  TIME_STEPS = 30
-  RUNS = 30
+  TIME_STEPS = 500
+  RUNS = 10
   
   # how many data owners to use and evaluate
-  OWNER_COUNT = 300
+  OWNER_COUNT = 200
   
   # experimental condition (RAAC classes)
   MODELS = [Raac,TraacSTOnly,TraacSTOT]
@@ -83,12 +83,12 @@ module Parameters
   # any time step - thus permanent decrease of risk budget (easier
   # than implementing TTL... although might be more rigorous)
   OBLIGATION_TIMEOUT_PROB = 0.1
-  INITIAL_BUDGET = 5
+  INITIAL_BUDGET = 15
   BUDGET_DECREMENT = 1
 
   # PARAMETERS SPECIFIC TO TRAAC
 
-  ST_PRIOR = 1
+  ST_PRIOR = 0
   OT_PRIOR = 1
 
   # we will use 'g' to mean good (trustworthy) and b to mean bad, for sharing trust and obligation trust respectively

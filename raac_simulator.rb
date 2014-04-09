@@ -12,12 +12,12 @@ class Raac_Simulator
   def initialize
     # results
     @results = {}
+    @type_results = {}
     # instantiate models
     setup
   end
   
   def setup
-
     # generate the requesting agents
     @requesters = []
     Parameters::TYPES.each do |type, props| 
@@ -34,7 +34,6 @@ class Raac_Simulator
     @owners = []
     @policies = {}
     @policy_zones = {}
-
     # replacement counter
     @replacement_counter = 0
     
@@ -97,18 +96,20 @@ class Raac_Simulator
   def run
     # for each specified model, do the number of runs
     Parameters::MODELS.each do |model_class|
-      #puts model_class.name
+      puts model_class.name
+      supersneakyresults = [0,0]
       Parameters::RUNS.times do |run|
         # reset experiment and model state between runs
         setup
         # instantiate a new model
         model = model_class.new
         run_results = []
+        type_run_results = []
+        sneakyresult = [0,0]
         # run TIME_STEPS accesses against the system
         Parameters::TIME_STEPS.times do |t|
           timestep_result = 0.0
-          sneakyresult = [0,0]
-
+          type_timestep_result = {}
           #for each owner, generate a random request against his model
           @owners.each do |owner|
             requester = @policy_zones[owner][:share].sample
@@ -123,10 +124,7 @@ class Raac_Simulator
 
             # do an access request, pass in policy
             result = model.authorisation_decision(request, @policies[owner])
-
-
-
-            #pp result
+            
             # if a good result, add bonus to timestep utility, if bad, remove
             # simulates realisation of risk/reward
             # if access is denied (through sharing) to someone in undefined_good, then bad
@@ -136,6 +134,7 @@ class Raac_Simulator
               if @policies[owner][recipient.id][0] == :undefined_bad then
                 timestep_result -= update.to_f
                 sneakyresult[0] += update.to_f
+                
               # if shared into read, share or undefined...
               elsif @policies[owner][recipient.id][0] == :undefined_good then
                 timestep_result += update.to_f
@@ -163,8 +162,8 @@ class Raac_Simulator
           
           # append timestep total to the array of results
           run_results << timestep_result.to_f / Parameters::OWNER_COUNT.to_f
-          puts "#{sneakyresult[0]}, #{sneakyresult[1]}"
-
+          supersneakyresults[0] += sneakyresult[0]
+          supersneakyresults[1] += sneakyresult[1]
         end
 
         # end of foreach timestep
@@ -172,8 +171,10 @@ class Raac_Simulator
         #print "."
       end
       #print "\n"
+      supersneakyresults.map! { |r| (r / Parameters::RUNS) / Parameters::TIME_STEPS }
+      puts supersneakyresults
+
     end
-    
     # write results to csv and svg
     Plotter.writeout_results(@results)
     Plotter.plot_results
