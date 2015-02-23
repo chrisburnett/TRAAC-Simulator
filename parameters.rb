@@ -91,11 +91,24 @@ module Parameters
   ST_PRIOR = 0
   OT_PRIOR = 1
 
-  # we will use 'g' to mean good (trustworthy) and b to mean bad, for sharing trust and obligation trust respectively
+  # we will use 'g' to mean good (trustworthy) and b to mean bad, for
+  # sharing trust and obligation trust respectively
   TYPES = {
     gg: { sharing: 0.8, obligation: 0.5, count: 10 },
     gb: { sharing: 0.8, obligation: 0.1, count: 10 },
     bg: { sharing: 0.2, obligation: 0.5, count: 10 },
     bb: { sharing: 0.2, obligation: 0.1, count: 10 }
   }
+
+  # for the moment, just two groups - mainly good (mg) and mainly bad
+  # (mb) this structure specifies the probability, for a given
+  # profile, the probability of an agent from that profile belonging
+  # to a given group note: a requester can be in more than one group
+  GROUPS = {
+    gg: { mg: 0.9, mb: 0.1 },
+    gb: { mg: 0.8, mb: 0.2 },
+    bg: { mg: 0.1, mb: 0.9 },
+    bb: { mg: 0.2, mb: 0.8 }
+  }
+
 end
