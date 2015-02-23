@@ -28,6 +28,21 @@ class Raac_Simulator
                                      type)
       end
     end
+
+    # create groups
+    @groups = {}
+    # for each requester, and each group, roll a dice and see if the
+    # requester should be in that group. Note that this allows
+    # requesters to be in multiple groups at the same time, but that's
+    # fine and probably even realistic
+    # TODO: test this!
+    @requesters.each do |agent| 
+      Parameters::GROUPS[agent.type].each do |group, prob|
+        if rand < prob then
+          @groups[group] << agent
+        end
+      end
+    end
     
     # generate owners and their policies
     # just symbols, the traac class will keep more details
@@ -104,12 +119,10 @@ class Raac_Simulator
         # instantiate a new model
         model = model_class.new
         run_results = []
-        type_run_results = []
         sneakyresult = [0,0]
         # run TIME_STEPS accesses against the system
         Parameters::TIME_STEPS.times do |t|
           timestep_result = 0.0
-          type_timestep_result = {}
           #for each owner, generate a random request against his model
           @owners.each do |owner|
             requester = @policy_zones[owner][:share].sample
@@ -171,8 +184,8 @@ class Raac_Simulator
         #print "."
       end
       #print "\n"
-      supersneakyresults.map! { |r| (r / Parameters::RUNS) / Parameters::TIME_STEPS }
-      puts supersneakyresults
+      #supersneakyresults.map! { |r| (r / Parameters::RUNS) / Parameters::TIME_STEPS }
+      #puts supersneakyresults
 
     end
     # write results to csv and svg
