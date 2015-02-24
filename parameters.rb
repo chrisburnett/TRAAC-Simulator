@@ -104,11 +104,16 @@ module Parameters
   # (mb) this structure specifies the probability, for a given
   # profile, the probability of an agent from that profile belonging
   # to a given group note: a requester can be in more than one group
+  # GROUPS = {
+  #   gg: { mg: 0.9, mb: 0.1 },
+  #   gb: { mg: 0.8, mb: 0.2 },
+  #   bg: { mg: 0.1, mb: 0.9 },
+  #   bb: { mg: 0.2, mb: 0.8 }
+  # }
+
   GROUPS = {
-    gg: { mg: 0.9, mb: 0.1 },
-    gb: { mg: 0.8, mb: 0.2 },
-    bg: { mg: 0.1, mb: 0.9 },
-    bb: { mg: 0.2, mb: 0.8 }
-  }
+    mg: { gg: 0.9, gb: 0.8, bg: 0.1, bb: 0.2 },
+    mb: { gg: 0.1, gb: 0.2, bg: 0.9, bb: 0.8 },
+  } 
 
 end

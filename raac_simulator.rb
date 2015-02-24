@@ -1,7 +1,8 @@
-# load params file
+# Load params file
 require_relative ARGV[0]
 
 require 'pp'
+require 'pry'
 require_relative 'requester'
 require_relative 'traac'
 require_relative 'raac'
@@ -16,15 +17,15 @@ class Raac_Simulator
     # instantiate models
     setup
   end
-  
+
   def setup
     # generate the requesting agents
     @requesters = []
-    Parameters::TYPES.each do |type, props| 
-      props[:count].times do |i| 
-        @requesters << Requester.new(type.to_s + i.to_s, 
-                                     props[:sharing], 
-                                     props[:obligation], 
+    Parameters::TYPES.each do |type, props|
+      props[:count].times do |i|
+        @requesters << Requester.new(type.to_s + i.to_s,
+                                     props[:sharing],
+                                     props[:obligation],
                                      type)
       end
     end
@@ -34,25 +35,29 @@ class Raac_Simulator
     # for each requester, and each group, roll a dice and see if the
     # requester should be in that group. Note that this allows
     # requesters to be in multiple groups at the same time, but that's
-    # fine and probably even realistic
-    # TODO: test this!
-    @requesters.each do |agent| 
-      Parameters::GROUPS[agent.type].each do |group, prob|
-        if rand < prob then
-          @groups[group] << agent
+    # fine and probably even realistic. If there are no groups in the
+    # parameters file, then this bit will do nothing.
+    if not Parameters::GROUPS.empty?
+      @requesters.each do |agent|
+        Parameters::GROUPS.each do |group, probs|
+          if rand < probs[agent.type] then
+            if not @groups[group] then @groups[group] = [] end
+            @groups[group] << agent
+          end
         end
       end
     end
-    
+
     # generate owners and their policies
     # just symbols, the traac class will keep more details
     @owners = []
     @policies = {}
+    @group_policies = {}
     @policy_zones = {}
     # replacement counter
     @replacement_counter = 0
-    
-    Parameters::OWNER_COUNT.times do |i| 
+
+    Parameters::OWNER_COUNT.times do |i|
       requester_stack = @requesters.dup
       # shuffle for random zone assignment
       requester_stack.shuffle!
@@ -60,8 +65,9 @@ class Raac_Simulator
       @owners << id
 
       # assign requesters to zones - do this like dealing out cards
+      # this should end up with a roughly equal distribution accross
+      # zones
       @policies[id] = Hash.new { |hash, key| hash[key] = [] }
-
       while not requester_stack.empty?
         Parameters::ZONES.each do |zone|
           r = requester_stack.pop
@@ -71,15 +77,22 @@ class Raac_Simulator
         end
       end
 
+      # assign groups to the group zone policies
+      # for each agent, assign groups randomly to zones
+      @group_policies[id] = Hash.new { |hash, key| hash[key] = [] }
+      Parameters::GROUPS.each do |group, _|
+        @group_policies[id][group] <<= Parameters::ZONES.sample
+      end      
+
       # optimisation - create another structure to maintain the policy
       # as sets - doesn't cause a problem as we are not changing the
       # policy
       @policy_zones[id] = {}
-      Parameters::ZONES.each do |zone| 
+      Parameters::ZONES.each do |zone|
         @policy_zones[id][zone] = @requesters.select { |r| @policies[id][r.id][0] == zone }
       end
-      
     end
+    binding.pry
   end
 
 
@@ -100,11 +113,11 @@ class Raac_Simulator
   def get_replacement(type_id)
     # replace the agent that moved
     @replacement_counter += 1
-    Requester.new("n" + type_id.to_s + @replacement_counter.to_s, 
-                  Parameters::TYPES[type_id][:sharing], 
+    Requester.new("n" + type_id.to_s + @replacement_counter.to_s,
+                  Parameters::TYPES[type_id][:sharing],
                   Parameters::TYPES[type_id][:obligation],
                   type_id
-                  )
+                 )
   end
 
 
@@ -126,9 +139,9 @@ class Raac_Simulator
           #for each owner, generate a random request against his model
           @owners.each do |owner|
             requester = @policy_zones[owner][:share].sample
-            
+
             recipient = get_recipient(owner, requester)
-            request = { 
+            request = {
               owner: owner,
               requester: requester,
               recipient: recipient,
@@ -137,17 +150,18 @@ class Raac_Simulator
 
             # do an access request, pass in policy
             result = model.authorisation_decision(request, @policies[owner])
-            
+
             # if a good result, add bonus to timestep utility, if bad, remove
             # simulates realisation of risk/reward
             # if access is denied (through sharing) to someone in undefined_good, then bad
             update = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
+
             # if access granted (through sharing) to someone in undefined_bad, then bad
             if result[:decision]
               if @policies[owner][recipient.id][0] == :undefined_bad then
                 timestep_result -= update.to_f
                 sneakyresult[0] += update.to_f
-                
+
               # if shared into read, share or undefined...
               elsif @policies[owner][recipient.id][0] == :undefined_good then
                 timestep_result += update.to_f
@@ -160,9 +174,8 @@ class Raac_Simulator
             end
           end
 
-          
           # deal with obligations
-          @requesters.each do |requester| 
+          @requesters.each do |requester|
             # at every time step there's a chance that agents will deal with obligations
             if rand < requester.obligation_comp
               model.do_obligation(requester)
@@ -170,9 +183,9 @@ class Raac_Simulator
             if rand < Parameters::OBLIGATION_TIMEOUT_PROB
               model.fail_obligation(requester)
             end
-            
+
           end
-          
+
           # append timestep total to the array of results
           run_results << timestep_result.to_f / Parameters::OWNER_COUNT.to_f
           supersneakyresults[0] += sneakyresult[0]
