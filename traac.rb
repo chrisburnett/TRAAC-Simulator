@@ -28,7 +28,6 @@ class TraacSTOnly < Raac
     trust = compute_trust(request, ind_policy, grp_policy)
     (1-trust)*loss
   end
-
   def compute_trust(request, ind_policy, grp_policy)
     # get the trust rating for this requester
     tm = @trust_models[request[:owner]]
@@ -44,9 +43,9 @@ class TraacSTOnly < Raac
   # positive if shared into read/share/undefined_good
   # negative if shared into deny/undefined_bad (else?)
   def evaluate_request(request, ind_policy, grp_policy)
-    if [:undefined_good, :read, :share].include? ind_policy[request[:recipient].id][0]
+    if [:undefined_good, :read, :share].include? ind_policy[request[:recipient].id]
       true
-    elsif [:undefined_bad, :deny].include? ind_policy[request[:recipient].id][0]
+    elsif [:undefined_bad, :deny].include? ind_policy[request[:recipient].id]
       false
     else
       nil
