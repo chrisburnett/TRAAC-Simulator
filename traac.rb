@@ -11,7 +11,9 @@ class TraacSTOnly < Raac
     super
     @trust_models = 
       Hash.new { |h,k| h[k] = DirectSLTrustModel.new(Parameters::ST_PRIOR) }
-    # FIXME these trust models *should* be conditional on the obligation, but we are assuming only one obligation for now, so everything is hardcoded around that
+    # FIXME these trust models *should* be conditional on the
+    # obligation, but we are assuming only one obligation for now, so
+    # everything is hardcoded around that
   end
 
   private
@@ -19,20 +21,20 @@ class TraacSTOnly < Raac
   # this is the only thing that changes from the Raac model - we
   # compute risk if we are computing the risk of a request, it means
   # it's been requested...  add it to the history
-  def compute_risk(request, policy)
+  def compute_risk(request, ind_policy, grp_policy)
     # standard risk formulation
     # get the risk and multiply by 1-trust
     loss = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
-    trust = compute_trust(request, policy)
+    trust = compute_trust(request, ind_policy, grp_policy)
     (1-trust)*loss
   end
 
-  def compute_trust(request, policy)
+  def compute_trust(request, ind_policy, grp_policy)
     # get the trust rating for this requester
     tm = @trust_models[request[:owner]]
     # evaluate and add result to the trust model
     tm.add_evidence(request[:requester], 
-                    evaluate_request(request, policy))
+                    evaluate_request(request, ind_policy, grp_policy))
     
     # return expectation
     tm.evaluate(request[:requester])
@@ -41,10 +43,10 @@ class TraacSTOnly < Raac
   # the evaluation function
   # positive if shared into read/share/undefined_good
   # negative if shared into deny/undefined_bad (else?)
-  def evaluate_request(request, policy)
-    if [:undefined_good, :read, :share].include? policy[request[:recipient].id][0]
+  def evaluate_request(request, ind_policy, grp_policy)
+    if [:undefined_good, :read, :share].include? ind_policy[request[:recipient].id][0]
       true
-    elsif [:undefined_bad, :deny].include? policy[request[:recipient].id][0]
+    elsif [:undefined_bad, :deny].include? ind_policy[request[:recipient].id][0]
       false
     else
       nil
