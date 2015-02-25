@@ -37,12 +37,12 @@ class Raac_Simulator
     # requesters to be in multiple groups at the same time, but that's
     # fine and probably even realistic. If there are no groups in the
     # parameters file, then this bit will do nothing.
+    # map agents to group symbols
     if not Parameters::GROUPS.empty?
       @requesters.each do |agent|
         Parameters::GROUPS.each do |group, probs|
           if rand < probs[agent.type] then
-            if not @groups[group] then @groups[group] = [] end
-            @groups[group] << agent
+            @groups[agent] = group
           end
         end
       end
@@ -72,27 +72,26 @@ class Raac_Simulator
         Parameters::ZONES.each do |zone|
           r = requester_stack.pop
           if not r == nil
-            @policies[id][r.id] <<= zone
+            @policies[id][r.id] = zone
           end
         end
       end
-
-      # assign groups to the group zone policies
+      
+      # create group zone policies
       # for each agent, assign groups randomly to zones
       @group_policies[id] = Hash.new { |hash, key| hash[key] = [] }
-      Parameters::GROUPS.each do |group, _|
-        @group_policies[id][group] <<= Parameters::ZONES.sample
-      end      
-
+      Parameters::GROUPS.each do |gid, _|
+        @group_policies[id][gid] = Parameters::ZONES.sample
+      end
       # optimisation - create another structure to maintain the policy
       # as sets - doesn't cause a problem as we are not changing the
       # policy
       @policy_zones[id] = {}
       Parameters::ZONES.each do |zone|
-        @policy_zones[id][zone] = @requesters.select { |r| @policies[id][r.id][0] == zone }
+        @policy_zones[id][zone] = @requesters.select { |r| @policies[id][r.id] == zone }
       end
     end
-    binding.pry
+    
   end
 
 
@@ -106,11 +105,11 @@ class Raac_Simulator
     else
       target_zones = [:undefined_bad]
     end
-    return @requesters.select { |r| target_zones.include?(@policies[owner][r.id][0]) }.sample
+    return @requesters.select { |r| target_zones.include?(@policies[owner][r.id]) }.sample
   end
 
   # get a replacement agent with a new unique id
-  def get_replacement(type_id)
+  def get_replacement(type_id, group_id)
     # replace the agent that moved
     @replacement_counter += 1
     Requester.new("n" + type_id.to_s + @replacement_counter.to_s,
@@ -147,9 +146,9 @@ class Raac_Simulator
               recipient: recipient,
               sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
             }
-
-            # do an access request, pass in policy
-            result = model.authorisation_decision(request, @policies[owner])
+            # do an access request, pass in individual and group
+            # policy and group assigments
+            result = model.authorisation_decision(request, @groups, @policies[owner], @group_policies[owner])
 
             # if a good result, add bonus to timestep utility, if bad, remove
             # simulates realisation of risk/reward
@@ -158,17 +157,17 @@ class Raac_Simulator
 
             # if access granted (through sharing) to someone in undefined_bad, then bad
             if result[:decision]
-              if @policies[owner][recipient.id][0] == :undefined_bad then
+              if @policies[owner][recipient.id] == :undefined_bad then
                 timestep_result -= update.to_f
                 sneakyresult[0] += update.to_f
 
               # if shared into read, share or undefined...
-              elsif @policies[owner][recipient.id][0] == :undefined_good then
+              elsif @policies[owner][recipient.id] == :undefined_good then
                 timestep_result += update.to_f
                 sneakyresult[1] += update.to_f
 
               end
-            elsif @policies[owner][recipient.id][0] == :undefined_good then
+            elsif @policies[owner][recipient.id] == :undefined_good then
               # and access denied, negative utility update
               # timestep_result -= update
             end
