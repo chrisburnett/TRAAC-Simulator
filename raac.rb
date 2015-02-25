@@ -9,9 +9,9 @@ class Raac
   end
   
   # This function returns a pair of decision (true or false) and an obligation (can be "none")
-  def authorisation_decision(request, policy)
+  def authorisation_decision(request, ind_policy, grp_policy)
     # compute the risk
-    risk = compute_risk(request, policy)
+    risk = compute_risk(request, ind_policy, grp_policy)
 
     # get the mitigation strategy for the permission mentioned in the request
     ms = Parameters::SENSITIVITY_TO_STRATEGIES[request[:sensitivity]]
@@ -21,7 +21,7 @@ class Raac
     fdomain = Parameters::REJECT_DOMAIN
     # check for deny zone and check the user has enough budget for this owner
     # (instant deny conditions)
-    if policy[request[:recipient]][0] != :deny &&
+    if ind_policy[request[:recipient]][0] != :deny &&
         request[:requester].risk_budget[request[:owner]] > 0
       # now check to see which risk domain the computed risk falls into
       risk_domains(request).each do |did, domain| 
@@ -57,8 +57,8 @@ class Raac
       strategy: ms, 
       requester: request[:requester].id,
       recipient: request[:recipient].id,
-      source_zone: policy[request[:requester].id][0], 
-      target_zone: policy[request[:recipient].id][0],
+      source_zone: ind_policy[request[:requester].id][0], 
+      target_zone: ind_policy[request[:recipient].id][0],
       req_budget: request[:requester].risk_budget[request[:owner]]
     }
   end
@@ -86,7 +86,7 @@ class Raac
   # This function is where everything happens - we take all the things
   # which are happening in the domain and the context and compute a
   # risk value - OUR CONTRIBUTION WILL GO HERE
-  def compute_risk(request, policy)
+  def compute_risk(request, ind_policy, grp_policy)
     # how is this done in Liang's paper?  there isn't risk computation
     # - so we need to use some kindof approximation let's adopt a
     # simple approach - trust is 0 for everyone so risk is always just
