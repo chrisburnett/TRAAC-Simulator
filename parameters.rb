@@ -9,8 +9,17 @@ module Parameters
   # how many data owners to use and evaluate
   OWNER_COUNT = 200
   
-  # experimental condition (RAAC classes)
+  # experimental conditions to use (RAAC classes)
   MODELS = [Raac,TraacSTOnly,TraacSTOT]
+
+  # experimental conditions (sharing types) the type of each generated
+  # request will be drawn by sampling this array. Remove/add types
+  # here to control the types of requests generated.
+  # ii = individual - individual (default)
+  # ig = individual - group
+  # gi = group - individual
+  # gg = group - group
+  REQUEST_TYPES = [:ii]
 
   # settings for the data owners, data objects and policies
 

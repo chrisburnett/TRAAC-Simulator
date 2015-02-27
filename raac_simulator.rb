@@ -54,6 +54,7 @@ class Raac_Simulator
     @policies = {}
     @group_policies = {}
     @policy_zones = {}
+    @group_policy_zones = {}
     # replacement counter
     @replacement_counter = 0
 
@@ -83,15 +84,19 @@ class Raac_Simulator
       Parameters::GROUPS.each do |gid, _|
         @group_policies[id][gid] = Parameters::ZONES.sample
       end
-      # optimisation - create another structure to maintain the policy
+      
+      # optimisation - create another structure to maintain the policies
       # as sets - doesn't cause a problem as we are not changing the
       # policy
       @policy_zones[id] = {}
       Parameters::ZONES.each do |zone|
         @policy_zones[id][zone] = @requesters.select { |r| @policies[id][r.id] == zone }
       end
+      @group_policy_zones[id] = {}
+      Parameters::ZONES.each do |zone|
+        @group_policy_zones[id][zone] = Parameters::GROUPS.select { |g| @group_policies[id][g] == zone }
+      end
     end
-    
   end
 
 
@@ -99,13 +104,18 @@ class Raac_Simulator
   # likely to get recipients from undefined_good, read or share
   # zones, while bad selectors will more likely get recipients from
   # the deny or undefined_bad zones
-  def get_recipient(owner, requester)
+  def get_recipient(owner, requester, group = false)
     if rand <= requester.sharing_comp
       target_zones = [:undefined_good]
     else
       target_zones = [:undefined_bad]
     end
-    return @requesters.select { |r| target_zones.include?(@policies[owner][r.id]) }.sample
+    # if we are looking to generate a recipient which is a group, look up the group policy
+    if group
+      return Parameters::GROUPS.select { |g| target_zones.include?(@group_policies[owner][g])}.sample
+    else
+      return @requesters.select { |r| target_zones.include?(@policies[owner][r.id]) }.sample
+    end
   end
 
   # get a replacement agent with a new unique id
@@ -135,17 +145,36 @@ class Raac_Simulator
         # run TIME_STEPS accesses against the system
         Parameters::TIME_STEPS.times do |t|
           timestep_result = 0.0
+          
           #for each owner, generate a random request against his model
           @owners.each do |owner|
-            requester = @policy_zones[owner][:share].sample
-
-            recipient = get_recipient(owner, requester)
+            # draw a request type randomly from those which are active
+            type = Parameters::REQUEST_TYPES.sample
+            # now select requesters and recipients - can be
+            # individuals or groups depending on condition
+            # requesters:
+            # NOTE: TODO: THIS IS NOT TESTED
+            if [:ii, :ig].include? type
+              requester = @policy_zones[owner][:share].sample
+            else
+              requester = @group_policy_zones[owner][:share].sample
+            end
+            # recipients:
+            if [:ii, :gi].include? type
+              recipient = get_recipient(owner, requester, group = false)
+            else
+              recipient = get_recipient(owner, requester, group = true)
+            end
+            # ------ POSSIBLY PROBLEMATIC -------
+            
             request = {
+              type: type,
               owner: owner,
               requester: requester,
               recipient: recipient,
               sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
             }
+            
             # do an access request, pass in individual and group
             # policy and group assigments
             result = model.authorisation_decision(request, @groups, @policies[owner], @group_policies[owner])
