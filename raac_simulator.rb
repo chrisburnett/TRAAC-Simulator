@@ -154,10 +154,18 @@ class Raac_Simulator
             # individuals or groups depending on condition
             # requesters:
             # NOTE: TODO: THIS IS NOT TESTED
-            if [:ii, :ig].include? type
-              requester = @policy_zones[owner][:share].sample
+            if [:gi, :gg].include? type
+              # select a group from the group share zone and select an
+              # individual from that group note that the individual
+              # may not necessarily be in the individual share zone
+              # for the owner....
+              binding.pry
+              requester_group = @group_policy_zones[owner][:share].keys.sample
+              binding.pry
+              requester = @groups.select { |a,g| g == requester_group }.keys.sample
+              binding.pry
             else
-              requester = @group_policy_zones[owner][:share].sample
+              requester = @policy_zones[owner][:share].sample
             end
             # recipients:
             if [:ii, :gi].include? type
@@ -171,6 +179,7 @@ class Raac_Simulator
               type: type,
               owner: owner,
               requester: requester,
+              requester_group: requester_group,
               recipient: recipient,
               sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
             }
