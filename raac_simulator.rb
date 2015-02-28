@@ -42,7 +42,8 @@ class Raac_Simulator
       @requesters.each do |agent|
         Parameters::GROUPS.each do |group, probs|
           if rand < probs[agent.type] then
-            @groups[agent] = group
+            if not @groups[agent] then @groups[agent] = [] end
+            @groups[agent] << group
           end
         end
       end
@@ -152,18 +153,16 @@ class Raac_Simulator
             type = Parameters::REQUEST_TYPES.sample
             # now select requesters and recipients - can be
             # individuals or groups depending on condition
-            # requesters:
-            # NOTE: TODO: THIS IS NOT TESTED
             if [:gi, :gg].include? type
               # select a group from the group share zone and select an
               # individual from that group note that the individual
               # may not necessarily be in the individual share zone
-              # for the owner....
-              binding.pry
+              # for the owner....  TODO: In the group conditions, we
+              # might not end up with a requester if there are no
+              # groups in the sharing zone. How do we deal with this?
+              # Need to have at least one group in the sharing zone?
               requester_group = @group_policy_zones[owner][:share].keys.sample
-              binding.pry
-              requester = @groups.select { |a,g| g == requester_group }.keys.sample
-              binding.pry
+              requester = @groups.select { |a,g| g.include? requester_group }.keys.sample
             else
               requester = @policy_zones[owner][:share].sample
             end
