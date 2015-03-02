@@ -19,7 +19,7 @@ module Parameters
   # ig = individual - group
   # gi = group - individual
   # gg = group - group
-  REQUEST_TYPES = [:ii]
+  REQUEST_TYPES = [:gi,:gg]
 
   # settings for the data owners, data objects and policies
 
@@ -114,9 +114,15 @@ module Parameters
   # profile, the probability of an agent from that profile belonging
   # to a given group note: a requester can be in more than one group
 
+  # at the moment, there needs to be AT LEAST four groups for the
+  # simulation to work properly
+
   GROUPS = {
-    mg: { gg: 0.9, gb: 0.8, bg: 0.1, bb: 0.2 },
-    mb: { gg: 0.1, gb: 0.2, bg: 0.9, bb: 0.8 },
+    mg1: { gg: 0.9, gb: 0.8, bg: 0.1, bb: 0.2 },
+    mb1: { gg: 0.1, gb: 0.2, bg: 0.9, bb: 0.8 },
+    mg2: { gg: 0.7, gb: 0.6, bg: 0.2, bb: 0.3 },
+    mb2: { gg: 0.2, gb: 0.3, bg: 0.7, bb: 0.6 },
+    avg: { gg: 0.5, gb: 0.5, bg: 0.5, bb: 0.5 }
   } 
 
 end
