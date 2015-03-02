@@ -10,5 +10,10 @@ class Requester
     # requester remembers risk budget for each owner
     @risk_budget = Hash.new(Parameters::INITIAL_BUDGET)
   end
+
+  def group?
+    false
+  end
+
   
 end

@@ -7,6 +7,7 @@ require_relative 'requester'
 require_relative 'traac'
 require_relative 'raac'
 require_relative 'plotter'
+require_relative 'group'
 
 class Raac_Simulator
 
@@ -30,7 +31,6 @@ class Raac_Simulator
       end
     end
 
-    # create groups
     @groups = {}
     # for each requester, and each group, roll a dice and see if the
     # requester should be in that group. Note that this allows
@@ -43,12 +43,14 @@ class Raac_Simulator
         Parameters::GROUPS.each do |group, probs|
           if rand < probs[agent.type] then
             if not @groups[agent] then @groups[agent] = [] end
-            @groups[agent] << group
+            # at the moment, we are not generating 'instances' of
+            # groups, so the id and type are the same
+            @groups[agent] << Group.new(group.to_s, group)
           end
         end
       end
     end
-
+    
     # generate owners and their policies
     # just symbols, the traac class will keep more details
     @owners = []
@@ -95,16 +97,11 @@ class Raac_Simulator
         end
       end
 
-      # create group zone policies for each agent, assign
-      # groups randomly to zones
-      # @group_policies[id] = Hash.new { |hash, key| hash[key] = [] }
-      # Parameters::GROUPS.each do |gid, _|
-      #   @group_policies[id][gid] = Parameters::ZONES.sample
-      # end
-
-      # optimisation - create another structure to maintain the policies
-      # as sets - doesn't cause a problem as we are not changing the
-      # policy
+      # optimisation - create another structure to maintain the
+      # policies as sets - doesn't cause a problem as we are not
+      # changing the policy. This is so we can ask 'is such and such
+      # in zone z of agent a?'  NOTE: we'd have to watch this if we
+      # had dynamicity
       @policy_zones[id] = {}
       Parameters::ZONES.each do |zone|
         @policy_zones[id][zone] = @requesters.select { |r| @policies[id][r.id] == zone }
@@ -130,7 +127,7 @@ class Raac_Simulator
     # if we are looking to generate a recipient which is a group, look up the group policy
     if group
       # get a group id from the target zone of the owner's policy
-      return Parameters::GROUPS.select { |g| target_zones.include?(@group_policies[owner][g])}.keys.sample
+      return Parameters::GROUPS.select { |g| target_zones.include?(@group_policies[owner][g.id])}.keys.sample
     else
       return @requesters.select { |r| target_zones.include?(@policies[owner][r.id]) }.sample
     end
@@ -196,7 +193,6 @@ class Raac_Simulator
 
             if recipient and requester
               request = {
-                type: type,
                 owner: owner,
                 requester: requester,
                 requester_group: requester_group,
