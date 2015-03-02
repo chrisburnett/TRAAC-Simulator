@@ -61,8 +61,10 @@ class Raac_Simulator
 
     Parameters::OWNER_COUNT.times do |i|
       requester_stack = @requesters.dup
+      group_stack = Parameters::GROUPS.keys
       # shuffle for random zone assignment
       requester_stack.shuffle!
+      group_stack.shuffle!
       id = "ow" + i.to_s
       @owners << id
 
@@ -78,14 +80,28 @@ class Raac_Simulator
           end
         end
       end
-      
-      # create group zone policies
-      # for each agent, assign groups randomly to zones
+
+      # assign groups to zones in the same way - in this way we need
+      # at least four groups to ensure that we don't get null
+      # requestors in the group cases TODO: we will need to handle
+      # this anyway
       @group_policies[id] = Hash.new { |hash, key| hash[key] = [] }
-      Parameters::GROUPS.each do |gid, _|
-        @group_policies[id][gid] = Parameters::ZONES.sample
+      while not group_stack.empty?
+        Parameters::ZONES.each do |zone|
+          g = group_stack.pop
+          if not g == nil
+            @group_policies[id][g] = zone
+          end
+        end
       end
-      
+
+      # create group zone policies for each agent, assign
+      # groups randomly to zones
+      # @group_policies[id] = Hash.new { |hash, key| hash[key] = [] }
+      # Parameters::GROUPS.each do |gid, _|
+      #   @group_policies[id][gid] = Parameters::ZONES.sample
+      # end
+
       # optimisation - create another structure to maintain the policies
       # as sets - doesn't cause a problem as we are not changing the
       # policy
@@ -113,7 +129,8 @@ class Raac_Simulator
     end
     # if we are looking to generate a recipient which is a group, look up the group policy
     if group
-      return Parameters::GROUPS.select { |g| target_zones.include?(@group_policies[owner][g])}.sample
+      # get a group id from the target zone of the owner's policy
+      return Parameters::GROUPS.select { |g| target_zones.include?(@group_policies[owner][g])}.keys.sample
     else
       return @requesters.select { |r| target_zones.include?(@policies[owner][r.id]) }.sample
     end
@@ -127,7 +144,7 @@ class Raac_Simulator
                   Parameters::TYPES[type_id][:sharing],
                   Parameters::TYPES[type_id][:obligation],
                   type_id
-                 )
+                  )
   end
 
 
@@ -146,7 +163,7 @@ class Raac_Simulator
         # run TIME_STEPS accesses against the system
         Parameters::TIME_STEPS.times do |t|
           timestep_result = 0.0
-          
+
           #for each owner, generate a random request against his model
           @owners.each do |owner|
             # draw a request type randomly from those which are active
@@ -173,40 +190,45 @@ class Raac_Simulator
               recipient = get_recipient(owner, requester, group = true)
             end
             # ------ POSSIBLY PROBLEMATIC -------
-            
-            request = {
-              type: type,
-              owner: owner,
-              requester: requester,
-              requester_group: requester_group,
-              recipient: recipient,
-              sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
-            }
-            
-            # do an access request, pass in individual and group
-            # policy and group assigments
-            result = model.authorisation_decision(request, @groups, @policies[owner], @group_policies[owner])
 
-            # if a good result, add bonus to timestep utility, if bad, remove
-            # simulates realisation of risk/reward
-            # if access is denied (through sharing) to someone in undefined_good, then bad
-            update = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
+            # only proceed if we are able to find a recipient and a
+            # requester
 
-            # if access granted (through sharing) to someone in undefined_bad, then bad
-            if result[:decision]
-              if @policies[owner][recipient.id] == :undefined_bad then
-                timestep_result -= update.to_f
-                sneakyresult[0] += update.to_f
+            if recipient and requester
+              request = {
+                type: type,
+                owner: owner,
+                requester: requester,
+                requester_group: requester_group,
+                recipient: recipient,
+                sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
+              }
 
-              # if shared into read, share or undefined...
+              # do an access request, pass in individual and group
+              # policy and group assignments
+              result = model.authorisation_decision(request, @groups, @policies[owner], @group_policies[owner])
+
+              # if a good result, add bonus to timestep utility, if bad, remove
+              # simulates realisation of risk/reward
+              # if access is denied (through sharing) to someone in undefined_good, then bad
+              update = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
+
+              # if access granted (through sharing) to someone in undefined_bad, then bad
+              if result[:decision]
+                if @policies[owner][recipient.id] == :undefined_bad then
+                  timestep_result -= update.to_f
+                  sneakyresult[0] += update.to_f
+
+                  # if shared into read, share or undefined...
+                elsif @policies[owner][recipient.id] == :undefined_good then
+                  timestep_result += update.to_f
+                  sneakyresult[1] += update.to_f
+
+                end
               elsif @policies[owner][recipient.id] == :undefined_good then
-                timestep_result += update.to_f
-                sneakyresult[1] += update.to_f
-
+                # and access denied, negative utility update
+                # timestep_result -= update
               end
-            elsif @policies[owner][recipient.id] == :undefined_good then
-              # and access denied, negative utility update
-              # timestep_result -= update
             end
           end
 
