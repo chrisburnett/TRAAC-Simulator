@@ -45,12 +45,12 @@ class Raac_Simulator
             if not @groups[agent] then @groups[agent] = [] end
             # at the moment, we are not generating 'instances' of
             # groups, so the id and type are the same
-            @groups[agent] << Group.new(group.to_s, group)
+            @groups[agent] << group
           end
         end
       end
     end
-    
+
     # generate owners and their policies
     # just symbols, the traac class will keep more details
     @owners = []
@@ -71,7 +71,7 @@ class Raac_Simulator
       @owners << id
 
       # assign requesters to zones - do this like dealing out cards
-      # this should end up with a roughly equal distribution accross
+      # this should end up with a roughly equal distribution across
       # zones
       @policies[id] = Hash.new { |hash, key| hash[key] = [] }
       while not requester_stack.empty?
@@ -119,6 +119,7 @@ class Raac_Simulator
   # zones, while bad selectors will more likely get recipients from
   # the deny or undefined_bad zones
   def get_recipient(owner, requester, group = false)
+
     if rand <= requester.sharing_comp
       target_zones = [:undefined_good]
     else
@@ -127,7 +128,8 @@ class Raac_Simulator
     # if we are looking to generate a recipient which is a group, look up the group policy
     if group
       # get a group id from the target zone of the owner's policy
-      return Parameters::GROUPS.select { |g| target_zones.include?(@group_policies[owner][g.id])}.keys.sample
+      group_id = Parameters::GROUPS.select { |g| target_zones.include?(@group_policies[owner][g])}.keys.sample
+      Group.new(group_id.to_s, group_id)
     else
       return @requesters.select { |r| target_zones.include?(@policies[owner][r.id]) }.sample
     end
@@ -141,7 +143,7 @@ class Raac_Simulator
                   Parameters::TYPES[type_id][:sharing],
                   Parameters::TYPES[type_id][:obligation],
                   type_id
-                  )
+                 )
   end
 
 
@@ -165,28 +167,31 @@ class Raac_Simulator
           @owners.each do |owner|
             # draw a request type randomly from those which are active
             type = Parameters::REQUEST_TYPES.sample
-            # now select requesters and recipients - can be
-            # individuals or groups depending on condition
-            if [:gi, :gg].include? type
-              # select a group from the group share zone and select an
-              # individual from that group note that the individual
-              # may not necessarily be in the individual share zone
-              # for the owner....  TODO: In the group conditions, we
-              # might not end up with a requester if there are no
-              # groups in the sharing zone. How do we deal with this?
-              # Need to have at least one group in the sharing zone?
-              requester_group = @group_policy_zones[owner][:share].keys.sample
-              requester = @groups.select { |a,g| g.include? requester_group }.keys.sample
-            else
-              requester = @policy_zones[owner][:share].sample
-            end
+            requester_group = @group_policy_zones[owner][:share].keys.sample
+            # now select requester
+            requester = if [:gi, :gg].include? type then
+                          # select a group from the group share zone and select an
+                          # individual from that group note that the individual
+                          # may not necessarily be in the individual share zone
+                          # for the owner....
+                          @groups.select { |a,g| g.include? requester_group }.keys.sample
+                        else
+                          @policy_zones[owner][:share].sample
+                        end
+
             # recipients:
-            if [:ii, :gi].include? type
-              recipient = get_recipient(owner, requester, group = false)
-            else
-              recipient = get_recipient(owner, requester, group = true)
-            end
-            # ------ POSSIBLY PROBLEMATIC -------
+            recipient = if [:ii, :gi].include? type then
+                          get_recipient(owner, requester, group = false)
+                        else
+                          get_recipient(owner, requester, group = true)
+                        end
+
+            # We don't need to specify what they type of the request
+            # is *in* the request object, because the model will
+            # decide that for itself. It will decide whether to decide
+            # access on the basis of individual or group policy, and
+            # the recipient can be asked whether it is an individual
+            # or group via .group?
 
             # only proceed if we are able to find a recipient and a
             # requester
@@ -195,10 +200,10 @@ class Raac_Simulator
               request = {
                 owner: owner,
                 requester: requester,
-                requester_group: requester_group,
                 recipient: recipient,
                 sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
               }
+              binding.pry
 
               # do an access request, pass in individual and group
               # policy and group assignments
@@ -215,7 +220,7 @@ class Raac_Simulator
                   timestep_result -= update.to_f
                   sneakyresult[0] += update.to_f
 
-                  # if shared into read, share or undefined...
+                # if shared into read, share or undefined...
                 elsif @policies[owner][recipient.id] == :undefined_good then
                   timestep_result += update.to_f
                   sneakyresult[1] += update.to_f
