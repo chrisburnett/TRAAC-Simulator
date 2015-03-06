@@ -182,7 +182,7 @@ class Raac_Simulator
                           if not ag
                             @policy_zones[owner][:share].sample
                           else
-                            a
+                            ag
                           end
                         else
                           @policy_zones[owner][:share].sample
