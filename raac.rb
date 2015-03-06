@@ -8,14 +8,17 @@ class Raac
     @active_obligations = Hash.new { |h,k| h[k] = [] }
   end
 
-  def individual_decision
+  def individual_decision(request, ind_policy)
+    decision = false
+    obligation = :none
+    fdomain = nil
     # check the requester is even allowed to share. At the
     # moment, this should always be true, because the simulator is
     # only passing in agents from the share zone but just for
     # completeness
     if ind_policy[request[:requester].id] == :share then
       # compute the risk
-      risk = compute_risk(request, ind_policy, grp_policy)
+      risk = compute_risk(request, ind_policy)
 
       # get the mitigation strategy for the permission mentioned in the request
       ms = Parameters::SENSITIVITY_TO_STRATEGIES[request[:sensitivity]]
@@ -48,38 +51,11 @@ class Raac
               decision = false
             else decision = true
             end
+            fdomain = did
           end
         end
       end
     end
-    return decision, obligation, did
-  end
-
-  # This function returns a pair of decision (true or false) and an obligation (can be "none")
-  def authorisation_decision(request, groups, ind_policy, grp_policy)
-    obligation = :none
-    decision = false
-    fdomain = Parameters::REJECT_DOMAIN
-
-    # first, check whether there is an explicit individual zone
-    # assignment. If not, we'll check the group zone
-    if not ind_policy[request[:requester].id] == :undefined then
-      decision, obligation, fdomain = individual_decision(request, ind_policy)
-    else
-      # otherwise we need to check whether the group is allowed to
-      # share, and work out the risk of sharing on that basis (and
-      # possibly using group risk mitigation strategies)
-    end
-
-    # the recipient might be a group, in which case it's already just
-    # a symbol and we don't need to call ID (like we do for
-    # individuals)
-    recipient = if request[:recipient].respond_to?(:id) then
-                  request[:recipient].id
-                else
-                  request[:recipient]
-                end
-
     # return lots of information
     return {
       decision: decision,
@@ -88,11 +64,26 @@ class Raac
       domain: fdomain,
       strategy: ms,
       requester: request[:requester].id,
-      recipient: recipient,
+      recipient: request[:recipient],
       source_zone: ind_policy[request[:requester].id],
       target_zone: ind_policy[request[:recipient].id],
       req_budget: request[:requester].risk_budget[request[:owner]]
     }
+  end
+
+  # This function returns a pair of decision (true or false) and an obligation (can be "none")
+  def authorisation_decision(request, groups, ind_policy, grp_policy)
+
+    # first, check whether there is an explicit individual zone
+    # assignment. If not, we'll check the group zone
+    if not ind_policy[request[:requester].id] == :undefined then
+      return individual_decision(request, ind_policy)
+    else
+      # otherwise we need to check whether the group is allowed to
+      # share, and work out the risk of sharing on that basis (and
+      # possibly using group risk mitigation strategies)
+    end
+
   end
 
   def add_obligation(requester, obligation, owner)
@@ -118,7 +109,7 @@ class Raac
   # This function is where everything happens - we take all the things
   # which are happening in the domain and the context and compute a
   # risk value - OUR CONTRIBUTION WILL GO HERE
-  def compute_risk(request, ind_policy, grp_policy)
+  def compute_risk(request, ind_policy)
     # how is this done in Liang's paper?  there isn't risk computation
     # - so we need to use some kindof approximation let's adopt a
     # simple approach - trust is 0 for everyone so risk is always just
