@@ -167,14 +167,23 @@ class Raac_Simulator
           @owners.each do |owner|
             # draw a request type randomly from those which are active
             type = Parameters::REQUEST_TYPES.sample
-            requester_group = @group_policy_zones[owner][:share].keys.sample
-            # now select requester
+           
+            # now select requester in the GI/GG case, we want to
+            # select agents who are members of a group that is allowed
+            # to share, but are individually undefined, to explicitly
+            # test the group risk assessment model. If we can't find
+            # such an agent, just sample the individual share zone.
             requester = if [:gi, :gg].include? type then
-                          # select a group from the group share zone and select an
-                          # individual from that group note that the individual
-                          # may not necessarily be in the individual share zone
-                          # for the owner....
-                          @groups.select { |a,g| g.include? requester_group }.keys.sample
+                          requester_group = @group_policy_zones[owner][:share].keys.sample
+                          group_share_requesters = @groups.select { |a,g| g.include? requester_group }
+                          ag = group_share_requesters.
+                              select { |a| @policy_zones[owner][:share].include? a }
+                              .keys.sample
+                          if not ag
+                            @policy_zones[owner][:share].sample
+                          else
+                            a
+                          end
                         else
                           @policy_zones[owner][:share].sample
                         end
@@ -203,7 +212,6 @@ class Raac_Simulator
                 recipient: recipient,
                 sensitivity: Parameters::SENSITIVITY_TO_STRATEGIES.keys.sample
               }
-              binding.pry
 
               # do an access request, pass in individual and group
               # policy and group assignments
