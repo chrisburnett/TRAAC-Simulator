@@ -121,6 +121,14 @@ class Raac
     # blocking, it will always do better.
   end
 
+  # EXTENSION: this function will compute risk when the recipient is
+  # in the undefined zone
+  def compute_group_risk(request, grp_policy)
+    # this model is not implementing group assessment, so just return
+    # maximum risk
+    return 1
+  end
+  
   # get the risk domains, possibly adjusting for trust
   def risk_domains(request)
     Parameters::RISK_DOMAINS
