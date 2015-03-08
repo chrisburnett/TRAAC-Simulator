@@ -80,8 +80,12 @@ class Raac
       return individual_decision(request, ind_policy)
     else
       # otherwise we need to check whether the group is allowed to
-      # share, and work out the risk of sharing on that basis (and
-      # possibly using group risk mitigation strategies)
+      # share. If the requester is unknown (i.e. we don't have any
+      # evidence about his sharing behaviour to form a trust
+      # assessment, which could well be the case when the requester is
+      # in the undefined zone) then we need to work out the risk of
+      # sharing on a group basis (and possibly using group risk
+      # mitigation strategies)
     end
 
   end
