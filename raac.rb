@@ -58,7 +58,10 @@ class Raac
       if ind_policy[recipient.id] == :deny then return false end
     end
 
-    # TODO: now the hard stuff
+    # TODO: now the hard stuff - at this point we want to just hand
+    # off to functions that will be subclassed, passing in everything
+    # we have
+    risk = compute_risk(request, ind_policy, grp_policy)
     
   end
 
@@ -74,7 +77,7 @@ class Raac
     # completeness
     if ind_policy[request[:requester].id] == :share then
       # compute the risk
-      risk = compute_risk(request, ind_policy)
+      risk = compute_risk(request, ind_policy, grp_policy)
 
       # get the mitigation strategy for the permission mentioned in the request
       ms = Parameters::SENSITIVITY_TO_STRATEGIES[request[:sensitivity]]
@@ -150,7 +153,7 @@ class Raac
   # This function is where everything happens - we take all the things
   # which are happening in the domain and the context and compute a
   # risk value - OUR CONTRIBUTION WILL GO HERE
-  def compute_risk(request, ind_policy)
+  def compute_risk(request, ind_policy, grp_policy)
     # how is this done in Liang's paper?  there isn't risk computation
     # - so we need to use some kindof approximation let's adopt a
     # simple approach - trust is 0 for everyone so risk is always just
@@ -160,14 +163,6 @@ class Raac
     # 0 because to use the actual risk makes the system more cautious
     # than our premissive mode, and since we don't punish bad
     # blocking, it will always do better.
-  end
-
-  # EXTENSION: this function will compute risk when the recipient is
-  # in the undefined zone
-  def compute_group_risk(request, grp_policy)
-    # this model is not implementing group assessment, so just return
-    # maximum risk
-    return 1
   end
 
   # get the risk domains, possibly adjusting for trust
