@@ -173,11 +173,12 @@ class Raac_Simulator
             # to share, but are individually undefined, to explicitly
             # test the group risk assessment model. If we can't find
             # such an agent, just sample the individual share zone.
+            
             requester = if [:gi, :gg].include? type then
                           requester_group = @group_policy_zones[owner][:share].keys.sample
                           group_share_requesters = @groups.select { |a,g| g.include? requester_group }
                           ag = group_share_requesters.
-                              select { |a| @policy_zones[owner][:share].include? a }
+                              select { |a| not @policy_zones[owner][:share].include? a }
                               .keys.sample
                           if not ag
                             @policy_zones[owner][:share].sample
