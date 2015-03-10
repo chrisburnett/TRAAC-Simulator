@@ -87,27 +87,6 @@ class TraacSTOT < TraacSTOnly
     # stitch up the new boundaries, expanding the deny interval
     new_domains[:d3][0] = new_domains[:d2][1]
 
-    # only modify d2! only obligation-domain
-    
-                             
-    # labels = old_domains.keys
-    # # Ruby 1.9 - values are returned in order of addition, nice
-    # old_domains.each do |label, domain| 
-    #   # get the next domain after this one
-    #   next_domain = old_domains[labels[labels.index(label) + 1]]
-    #   # get the amount to move
-    #   if next_domain
-    #     delta = ot * (domain[1] - domain[0])
-    #     # add to new domain list
-    #     new_domains[label] = [domain[0], domain[1] - delta]
-    #   else
-    #     # if we are on the last domain, we don't expand this one so
-    #     # just add it as is
-    #     new_domains[label] = domain
-    #   end
-
-    #oputs "#{new_domains} - ot: #{ot} - rq: #{requester.id} - #{delta}"
-    
     return new_domains
   end
   
