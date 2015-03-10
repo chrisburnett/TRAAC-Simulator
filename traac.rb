@@ -21,13 +21,14 @@ class TraacSTOnly < Raac
   # this is the only thing that changes from the Raac model - we
   # compute risk if we are computing the risk of a request, it means
   # it's been requested...  add it to the history
-  def compute_risk(request, ind_policy)
+  def compute_risk(request, ind_policy, grp_policy)
     # standard risk formulation
     # get the risk and multiply by 1-trust
     loss = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
     trust = compute_trust(request, ind_policy, grp_policy)
     (1-trust)*loss
   end
+  
   def compute_trust(request, ind_policy)
     # get the trust rating for this requester
     tm = @trust_models[request[:owner]]
