@@ -8,7 +8,63 @@ class Raac
     @active_obligations = Hash.new { |h,k| h[k] = [] }
   end
 
-  def individual_decision(request, ind_policy)
+  # Check whether requester can share
+  # Is in individual share zone?
+  # Yes: goto 2
+  # No: is individual in a group which is in group share zone?
+  # Yes: goto 2
+  # No: deny
+  # Check whether requester can be shared with
+  # Is in individual read/share zone?
+  # Yes: allow
+  # No:
+  #   is individual in group which is in read/share zone?
+  # Yes: goto 3
+  # No: deny
+  # Compute risk of sharing
+  # Compute group risk
+  # ...
+  #   Compute individual risk (using group risk as apriori)
+  # Allow requester to choose a risk mitigating obligation
+  # What kind of RMO was chosen?
+  # Individual?
+  # mitigate risk using individual O-Trust
+  # return decision
+  # Group?
+  # mitigate risk using Group O-Trust of the group to which the obligation was deferred
+  # return decision
+  # Monitor for fulfilment and update all O-Trust and S-Trust
+
+  def test_authorisation_decision(request, ind_policy, grp_policy, groups)
+    requester = request[:requester]
+    recipient = request[:recipient]
+    binding.pry
+    # deny if neither the individual or group levels allow sharing
+    if ind_policy[requester.id] != :share then
+      # if the individual zone doesn't allow sharing, we need to check
+      # whether *any* of the requester's groups are in the group share
+      # zone. If not, deny
+      share_groups = groups[requester].
+        select { |group| grp_policy[group] == :share }
+      if share_groups.empty? then false end
+    end
+
+    # now, we know that the requester is allowed to share. Check
+    # recipient can receive
+    if recipent.group? then
+      # if the recipient is in deny then deny the request outright
+      if grp_policy[recipient.type] == :deny then return false end
+    else
+      if ind_policy[recipient.id] == :deny then return false end
+    end
+
+    # TODO: now the hard stuff
+    
+  end
+
+
+  # This function returns a pair of decision (true or false) and an obligation (can be "none")
+  def authorisation_decision(request, groups, ind_policy, grp_policy)
     decision = false
     obligation = :none
     fdomain = nil
@@ -23,14 +79,14 @@ class Raac
       # get the mitigation strategy for the permission mentioned in the request
       ms = Parameters::SENSITIVITY_TO_STRATEGIES[request[:sensitivity]]
 
-      # get the individual and group policy zones this recipient
+      # get the individual zone this recipient
       # belongs to
       ind_zone = ind_policy[request[:recipient].id]
 
       # check for deny zone and check the user has enough budget for
       # this owner (instant deny conditions)
       if ind_zone != :deny &&
-         request[:requester].risk_budget[request[:owner]] > 0
+          request[:requester].risk_budget[request[:owner]] > 0
         # if the individual zone is explicitly defined (and not deny)
 
         # now check to see which risk domain the computed risk falls into
@@ -69,25 +125,6 @@ class Raac
       target_zone: ind_policy[request[:recipient].id],
       req_budget: request[:requester].risk_budget[request[:owner]]
     }
-  end
-
-  # This function returns a pair of decision (true or false) and an obligation (can be "none")
-  def authorisation_decision(request, groups, ind_policy, grp_policy)
-
-    # first, check whether there is an explicit individual zone
-    # assignment. If not, we'll check the group zone
-    if not ind_policy[request[:requester].id] == :undefined then
-      return individual_decision(request, ind_policy)
-    else
-      # otherwise we need to check whether the group is allowed to
-      # share. If the requester is unknown (i.e. we don't have any
-      # evidence about his sharing behaviour to form a trust
-      # assessment, which could well be the case when the requester is
-      # in the undefined zone) then we need to work out the risk of
-      # sharing on a group basis (and possibly using group risk
-      # mitigation strategies)
-    end
-
   end
 
   def add_obligation(requester, obligation, owner)
@@ -132,7 +169,7 @@ class Raac
     # maximum risk
     return 1
   end
-  
+
   # get the risk domains, possibly adjusting for trust
   def risk_domains(request)
     Parameters::RISK_DOMAINS
