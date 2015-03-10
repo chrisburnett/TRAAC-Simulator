@@ -4,7 +4,8 @@
 
 class DirectSLTrustModel
 
-  attr_reader :evidence, :ratings
+  attr_reader :evidence, :ratings, :prior
+  attr_writer :prior
 
   def initialize(prior)
     # store of positive/negative observations after interactions
@@ -35,7 +36,7 @@ class DirectSLTrustModel
   end
 
   # return an SL opinion from the R and S parameters
-  def compute_opinion(evidence, prior)
+  def compute_opinion(evidence)
     {
      b: evidence[:r] / (evidence[:r] + evidence[:s] + 2),
      d: evidence[:s] / (evidence[:r] + evidence[:s] + 2),
