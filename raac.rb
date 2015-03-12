@@ -8,63 +8,94 @@ class Raac
     @active_obligations = Hash.new { |h,k| h[k] = [] }
   end
 
+
   # Check whether requester can share
+  # Is in individual deny zone?
+  # Yes: deny
   # Is in individual share zone?
   # Yes: goto 2
   # No: is individual in a group which is in group share zone?
   # Yes: goto 2
   # No: deny
-  # Check whether requester can be shared with
+
+  # Check whether recipient can be shared with
+  # Is in individual deny zone?
+  # Yes: deny
   # Is in individual read/share zone?
-  # Yes: allow
-  # No:
-  #   is individual in group which is in read/share zone?
-  # Yes: goto 3
-  # No: deny
+  # Yes: allow (still entails risk!)
+  # Is individual in group which is in group deny zone?
+  # Yes: deny
+  # Is individual in group which is in group read/share zone?
+  # Yes: allow (still entails risk!)
+  # No: goto 3
+
   # Compute risk of sharing
-  # Compute group risk
-  # ...
-  #   Compute individual risk (using group risk as apriori)
+  # Compute group trust
+  # Compute individual trusts from groups and aggregate SOMEHOW
+  # Compute group+individual trust for individual (using group trust as apriori)
+  # Compute risk using combined (using loss values)
   # Allow requester to choose a risk mitigating obligation
   # What kind of RMO was chosen?
   # Individual?
   # mitigate risk using individual O-Trust
-  # return decision
+  # return decision (entails risk)
   # Group?
   # mitigate risk using Group O-Trust of the group to which the obligation was deferred
-  # return decision
+  # return decision (entails risk)
   # Monitor for fulfilment and update all O-Trust and S-Trust
 
-  def test_authorisation_decision(request, ind_policy, grp_policy, groups)
+  # TODO: UNIT TEST
+  def new_authorisation_decision(request, ind_policy, grp_policy, groups)
     requester = request[:requester]
     recipient = request[:recipient]
-    binding.pry
-    # deny if neither the individual or group levels allow sharing
-    if ind_policy[requester.id] != :share then
-      # if the individual zone doesn't allow sharing, we need to check
-      # whether *any* of the requester's groups are in the group share
-      # zone. If not, deny
-      share_groups = groups[requester].
-        select { |group| grp_policy[group] == :share }
-      if share_groups.empty? then false end
+
+    ind_requester_zone = ind_policy[requester.id]
+
+    # NOTE: this needs check the right policy recipient can be a
+    # group, which means that the 'individual' assignment actually
+    # comes from the group policy
+    ind_recipient_zone = if recipient.group? then
+                           grp_policy[recipient.id]
+                         else
+                           ind_policy[recipient.id]
+                         end
+
+    # check for individual deny conditions - if the user is not in the
+    # share zone individually then they need to have a group
+    # assignment in the share zone
+    if ind_requester_zone != :share then
+      if ind_requester_zone == :deny then return false
+      elsif groups[requester].
+          select { |group| grp_policy[group] == :share }.
+          empty? then return false
+      end
     end
 
-    # now, we know that the requester is allowed to share. Check
-    # recipient can receive
-    if recipent.group? then
-      # if the recipient is in deny then deny the request outright
-      if grp_policy[recipient.type] == :deny then return false end
+    # check whether recipient can receive
+    # if in ind. deny zone  - deny
+    if ind_recipient_zone == :deny then return false
+    elsif [:read, :share].include? ind_recipient_zone then
+      return true # allow if recipient can read or share
     else
-      if ind_policy[recipient.id] == :deny then return false end
+      # reject if any of recipients groups are in deny
+      groups[recipient].each do |g|
+        if grp_policy[g] == :deny then return false end
+      end
+
+      # allow if no deny zone groups and at least one share/read zone
+      # group
+      groups[recipient].each do |g|
+        if [:read,:share].include? grp_policy[g] then return true end
+      end
     end
 
-    # TODO: now the hard stuff - at this point we want to just hand
-    # off to functions that will be subclassed, passing in everything
-    # we have
-    risk = compute_risk(request, ind_policy, grp_policy)
+    # at this point, it should be the case that the requester is
+    # either in the individual share zone OR is in a group which is in
+    # the group share zone, and the recipient is in the undefined zone
+    # individually and is not in any groups which are explicitly in
+    # the group deny zone
     
   end
-
 
   # This function returns a pair of decision (true or false) and an obligation (can be "none")
   def authorisation_decision(request, groups, ind_policy, grp_policy)
