@@ -14,7 +14,7 @@ class GtraacSTOT < TraacSTOT
     super
   end
 
-  def compute_risk(request, ind_policy, grp_policy)
+  def compute_risk(request, ind_policy, grp_policy, groups)
     # compute individual trust and group trust based on all evidence
     # we can get - group trust metric will be used as apriori (like
     # with stereotypes)
@@ -23,7 +23,7 @@ class GtraacSTOT < TraacSTOT
   end
   
   # compute the trust ratings for the group(s) being assessed
-  def compute_group_trust(request, grp_policy)
+  def compute_group_trust(request, grp_policy, groups)
     
     # the thing to address here is, you look at the other members of
     # the group being assessed, get the trust ratings for them, ???
@@ -33,7 +33,7 @@ class GtraacSTOT < TraacSTOT
 
   # compute the risk of allowing an agent with some group memberships
   # to share some information
-  def compute_group_risk(request, grp_policy)
+  def compute_group_risk(request, grp_policy, groups)
   end
 
   

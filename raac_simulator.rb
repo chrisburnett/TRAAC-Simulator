@@ -45,7 +45,7 @@ class Raac_Simulator
             if not @groups[agent] then @groups[agent] = [] end
             # at the moment, we are not generating 'instances' of
             # groups, so the id and type are the same
-            @groups[agent] << group
+            @groups[agent] << group.to_s
           end
         end
       end
@@ -92,7 +92,7 @@ class Raac_Simulator
         Parameters::ZONES.each do |zone|
           g = group_stack.pop
           if not g == nil
-            @group_policies[id][g] = zone
+            @group_policies[id][g.to_s] = zone
           end
         end
       end
@@ -108,7 +108,7 @@ class Raac_Simulator
       end
       @group_policy_zones[id] = {}
       Parameters::ZONES.each do |zone|
-        @group_policy_zones[id][zone] = Parameters::GROUPS.select { |g| @group_policies[id][g] == zone }
+        @group_policy_zones[id][zone] = Parameters::GROUPS.select { |g| @group_policies[id][g.to_s] == zone }
       end
     end
   end
@@ -129,7 +129,7 @@ class Raac_Simulator
     if group
       # get a group id from the target zone of the owner's policy
       group_id = Parameters::GROUPS.select { |g| target_zones.include?(@group_policies[owner][g])}.keys.sample
-      Group.new(group_id.to_s, group_id)
+      Group.new(group.id.to_s, group_id)
     else
       return @requesters.select { |r| target_zones.include?(@policies[owner][r.id]) }.sample
     end
@@ -216,6 +216,8 @@ class Raac_Simulator
 
               # do an access request, pass in individual and group
               # policy and group assignments
+              t_result = model.new_authorisation_decision(request, @policies[owner], @group_policies[owner], @groups)
+              binding.pry
               result = model.authorisation_decision(request, @groups, @policies[owner], @group_policies[owner])
 
               # if a good result, add bonus to timestep utility, if bad, remove

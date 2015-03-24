@@ -48,7 +48,7 @@ class Raac
   def new_authorisation_decision(request, ind_policy, grp_policy, groups)
     requester = request[:requester]
     recipient = request[:recipient]
-
+    binding.pry
     ind_requester_zone = ind_policy[requester.id]
 
     # NOTE: this needs check the right policy recipient can be a
@@ -94,7 +94,12 @@ class Raac
     # the group share zone, and the recipient is in the undefined zone
     # individually and is not in any groups which are explicitly in
     # the group deny zone
+
+    # we now hand over to the trust and risk assessment layer to deal
+    # with this unknown request
     
+    risk = compute_risk(request, ind_policy, grp_policy, groups)
+
   end
 
   # This function returns a pair of decision (true or false) and an obligation (can be "none")
@@ -184,7 +189,7 @@ class Raac
   # This function is where everything happens - we take all the things
   # which are happening in the domain and the context and compute a
   # risk value - OUR CONTRIBUTION WILL GO HERE
-  def compute_risk(request, ind_policy, grp_policy)
+  def compute_risk(request, ind_policy, grp_policy, groups)
     # how is this done in Liang's paper?  there isn't risk computation
     # - so we need to use some kindof approximation let's adopt a
     # simple approach - trust is 0 for everyone so risk is always just

@@ -16,20 +16,25 @@ class TraacSTOnly < Raac
     # everything is hardcoded around that
   end
 
+  # update the a priori trust value for a particular agent
+  def update_prior(owner, agent, prior)
+    @trust_models[agent].prior = prior
+  end
+    
   private
 
   # this is the only thing that changes from the Raac model - we
   # compute risk if we are computing the risk of a request, it means
   # it's been requested...  add it to the history
-  def compute_risk(request, ind_policy, grp_policy)
+  def compute_risk(request, ind_policy, grp_policy, groups)
     # standard risk formulation
     # get the risk and multiply by 1-trust
     loss = Parameters::SENSITIVITY_TO_LOSS[request[:sensitivity]]
-    trust = compute_trust(request, ind_policy, grp_policy)
+    trust = compute_trust(request, ind_policy, grp_policy, groups)
     (1-trust)*loss
   end
-  
-  def compute_trust(request, ind_policy)
+
+  def compute_trust(request, ind_policy, grp_policy, groups)
     # get the trust rating for this requester
     tm = @trust_models[request[:owner]]
     # evaluate and add result to the trust model
@@ -43,7 +48,7 @@ class TraacSTOnly < Raac
   # the evaluation function
   # positive if shared into read/share/undefined_good
   # negative if shared into deny/undefined_bad (else?)
-  def evaluate_request(request, ind_policy)
+  def evaluate_request(request, ind_policy, grp_policy)
     if [:undefined_good, :read, :share].include? ind_policy[request[:recipient].id]
       true
     elsif [:undefined_bad, :deny].include? ind_policy[request[:recipient].id]
