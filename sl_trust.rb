@@ -5,7 +5,7 @@
 class DirectSLTrustModel
 
   attr_reader :evidence, :ratings, :prior
-  attr_writer :prior
+  attr_accessor :prior
 
   def initialize(prior)
     # store of positive/negative observations after interactions
