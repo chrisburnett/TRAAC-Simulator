@@ -48,7 +48,7 @@ class Raac
   def new_authorisation_decision(request, ind_policy, grp_policy, groups)
     requester = request[:requester]
     recipient = request[:recipient]
-    binding.pry
+
     ind_requester_zone = ind_policy[requester.id]
 
     # NOTE: this needs check the right policy recipient can be a

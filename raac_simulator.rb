@@ -217,7 +217,7 @@ class Raac_Simulator
               # do an access request, pass in individual and group
               # policy and group assignments
               t_result = model.new_authorisation_decision(request, @policies[owner], @group_policies[owner], @groups)
-              binding.pry
+
               result = model.authorisation_decision(request, @groups, @policies[owner], @group_policies[owner])
 
               # if a good result, add bonus to timestep utility, if bad, remove
