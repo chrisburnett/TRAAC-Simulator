@@ -24,7 +24,7 @@ RSpec.describe Raac do
       # default test group assignments
       @groups = {
         @requester => [ :g1 ],
-        @recipient => [ :g2 ]
+        @recipient => [ :g2, :g3 ]
 
       }
 
@@ -70,6 +70,21 @@ RSpec.describe Raac do
         result = @model.new_authorisation_decision(@request, ind_policy, {}, @groups)
         expect(result).to be true
       end
+
+      it "allows the request if the recipient is in a group which can read" do
+        ind_policy = { @requester.id => :share, @recipient.id => :undefined  }
+        grp_policy = { :g2 => :read }
+        result = @model.new_authorisation_decision(@request, ind_policy, grp_policy, @groups)
+        expect(result).to be true
+      end
+      
+      it "denies the request if the recipient is in a group which is in the deny zone" do
+        ind_policy = { @requester.id => :share, @recipient.id => :undefined  }
+        grp_policy = { :g2 => :read, :g3 => :deny }
+        result = @model.new_authorisation_decision(@request, ind_policy, grp_policy, @groups)
+        expect(result).to be false
+      end
+      
     end
 
 
@@ -103,6 +118,13 @@ RSpec.describe Raac do
         result = @model.new_authorisation_decision(@request, ind_policy, grp_policy, @groups)
         expect(result).to be true
       end
+      it "denies if the requester is in a share-zone group, and the recipient is in a group which is in the deny zone" do
+        ind_policy = { @requester.id => :undefined, @recipient.id => :undefined }
+        grp_policy = { :g1 => :share, :g2 => :read, :g3 => :deny }
+        result = @model.new_authorisation_decision(@request, ind_policy, grp_policy, @groups)
+        expect(result).to be false
+      end
+      
     end
    
 
